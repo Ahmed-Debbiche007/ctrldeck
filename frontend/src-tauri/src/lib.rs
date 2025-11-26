@@ -68,15 +68,18 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Kill the sidecar when the window is closed
             if let tauri::WindowEvent::Destroyed = event {
-                let state = window.state::<SidecarState>();
-                if let Some(child) = state.child.lock().unwrap().take() {
+                let child = {
+                    let state = window.state::<SidecarState>();
+                    state.child.lock().unwrap().take()
+                };
+            
+                if let Some(child) = child {
                     let _ = child.kill();
                     println!("Backend server stopped");
                 }
             }
-        })
+        })     
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
