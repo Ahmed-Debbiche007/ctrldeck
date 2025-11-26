@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Zap, BarChart3, Settings, X, ChevronUp } from 'lucide-react';
+import { Zap, BarChart3} from 'lucide-react';
 import { ActionsPage } from './pages/ActionsPage';
 import { MetricsPage } from './pages/MetricsPage';
 import { ConnectionSetup } from './pages/ConnectionSetup';
@@ -32,6 +32,7 @@ function App() {
   }, []);
 
   const checkConnection = async () => {
+    console.log(connected);
     if (!isConfigured()) {
       setConnected(false);
       return;
@@ -105,12 +106,12 @@ function App() {
         style={{ scrollSnapType: 'x mandatory' }}
       >
         {/* Buttons Page */}
-        <div className="w-full h-full flex-shrink-0 snap-center overflow-y-auto">
+        <div className="w-full h-full shrink-0 snap-center overflow-y-auto">
           <ActionsPage onSettingsClick={() => setShowSettings(true)} />
         </div>
         
         {/* Metrics Page */}
-        <div className="w-full h-full flex-shrink-0 snap-center overflow-y-auto">
+        <div className="w-full h-full shrink-0 snap-center overflow-y-auto">
           <MetricsPage onSettingsClick={() => setShowSettings(true)} />
         </div>
       </div>

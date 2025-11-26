@@ -27,7 +27,7 @@ function App() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 p-4 border-b border-gray-800">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
             <Zap size={20} className="text-white" />
           </div>
           {sidebarOpen && (
@@ -91,10 +91,10 @@ function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      <main className="flex-1 overflow-auto bg-linear-to-br from-gray-950 via-gray-900 to-gray-950">
         {/* Background Pattern */}
         <div className="fixed inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
           <div
             className="absolute inset-0 opacity-30"
             style={{

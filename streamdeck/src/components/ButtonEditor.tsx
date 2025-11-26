@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import { Button, ActionType, InstalledApp, Script } from '../types';
 import { IconPicker, getIconComponent } from './IconPicker';
@@ -34,7 +34,7 @@ export function ButtonEditor({ button, onSave, onClose }: ButtonEditorProps) {
   const [actionType, setActionType] = useState<ActionType>(button?.action_type || 'mute_mic');
   const [actionData, setActionData] = useState<Record<string, string>>(button?.action_data || {});
   const [color, setColor] = useState(button?.color || '#3b82f6');
-  const [position, setPosition] = useState(button?.position || 0);
+  const position = button?.position || 0;
   
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [apps, setApps] = useState<InstalledApp[]>([]);

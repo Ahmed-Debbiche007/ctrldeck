@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Wifi, Copy, Check, RefreshCw, Smartphone } from 'lucide-react';
 import { getServerInfo } from '../api';
@@ -173,7 +173,7 @@ export function ConnectionPage() {
                 <div className="space-y-1">
                   {ipAddresses.map((ip, index) => (
                     <div 
-                      key={ip} 
+                      key={index} 
                       className={`${ip === selectedIp ? 'text-blue-400' : 'text-gray-400'}`}
                     >
                       {ip}

@@ -12,13 +12,11 @@ import {
   ArrowUp,
   ArrowDown,
   Wifi,
-  Plus,
   Eye,
-  EyeOff,
-  GripVertical,
+  EyeOff
 } from 'lucide-react';
 import { Widget, SystemMetrics, WidgetType } from '../types';
-import { getWidgets, createWidget, updateWidgets, connectWebSocket, getSystemMetrics } from '../api';
+import { getWidgets, updateWidgets, connectWebSocket, getSystemMetrics } from '../api';
 
 interface MetricCardProps {
   title: string;

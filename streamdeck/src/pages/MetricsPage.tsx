@@ -6,8 +6,6 @@ import {
   BatteryCharging,
   Volume2,
   VolumeX,
-  Mic,
-  MicOff,
   Thermometer,
   ArrowUp,
   ArrowDown,

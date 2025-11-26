@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Play, GripVertical } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, Edit2, GripVertical } from 'lucide-react';
 import { Button } from '../types';
 import { getButtons, createButton, deleteButton, executeAction } from '../api';
 import { ButtonEditor } from '../components/ButtonEditor';

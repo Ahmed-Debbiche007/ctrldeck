@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Zap, Wifi, CheckCircle, XCircle, Loader2, QrCode, X, Camera, ScanLine } from 'lucide-react';
+import  { useState, useRef, useEffect } from 'react';
+import { Zap, Wifi, CheckCircle, XCircle, Loader2, QrCode, X } from 'lucide-react';
 import { setApiBase, testConnection, getApiBase, isConfigured } from '../api';
 
 interface ConnectionSetupProps {
@@ -175,7 +175,7 @@ export function ConnectionSetup({ onComplete, isBottomSheet = false, onClose }: 
 
   // QR Scanner Modal
   const renderScanner = () => (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+    <div className="fixed inset-0 z-100 bg-black flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-gray-900/80">
         <h3 className="text-white font-medium">Scan QR Code</h3>
@@ -346,7 +346,7 @@ export function ConnectionSetup({ onComplete, isBottomSheet = false, onClose }: 
       <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4 safe-area-top safe-area-bottom">
         {/* Logo */}
         <div className="mb-6">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-blue-500/30">
+          <div className="w-16 h-16 rounded-xl bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-blue-500/30">
             <Zap size={32} className="text-white" />
           </div>
         </div>
