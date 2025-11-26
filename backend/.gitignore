@@ -1,0 +1,79 @@
+# ========================
+# Go Binaries
+# ========================
+# Compiled binaries
+streamdeck-server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+
+# Output of go coverage tool
+*.out
+coverage.html
+
+# ========================
+# Go Workspace
+# ========================
+go.work
+go.work.sum
+
+# ========================
+# Vendor (if not committing dependencies)
+# ========================
+# vendor/
+
+# ========================
+# IDE / Editor
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ========================
+# Environment & Config
+# ========================
+.env
+!.env.example
+config.local.json
+secrets.json
+
+# ========================
+# OS Files
+# ========================
+.DS_Store
+Thumbs.db
+
+# ========================
+# Debug & Logs
+# ========================
+debug
+*.log
+logs/
+
+# ========================
+# Temporary Files
+# ========================
+tmp/
+*.tmp
+*.bak
+
+# ========================
+# Build Artifacts
+# ========================
+bin/
+dist/
+
+# ========================
+# Profiling
+# ========================
+*.prof
+*.pprof
+cpu.out
+mem.out

@@ -1,0 +1,181 @@
+name: Build Frontend Desktop App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/build-frontend-desktop.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+  workflow_dispatch:
+
+env:
+  # Environment variables for the frontend build
+  VITE_API_BASE: http://localhost:8080
+  VITE_WS_BASE: ws://localhost:8080
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            backend_target: linux
+            backend_ext: ''
+            artifact_name: frontend-linux
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            backend_target: windows
+            backend_ext: '.exe'
+            artifact_name: frontend-windows
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ============================================
+      # Build Backend
+      # ============================================
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: backend/go.sum
+
+      - name: Build Backend (Linux)
+        if: matrix.backend_target == 'linux'
+        working-directory: backend
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o streamdeck-server ./cmd/server
+          chmod +x streamdeck-server
+
+      - name: Build Backend (Windows)
+        if: matrix.backend_target == 'windows'
+        working-directory: backend
+        shell: bash
+        run: |
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o streamdeck-server.exe ./cmd/server
+
+      # ============================================
+      # Prepare Sidecar Binary
+      # ============================================
+      - name: Create binaries directory
+        run: mkdir -p frontend/src-tauri/binaries
+
+      - name: Copy backend binary (Linux)
+        if: matrix.backend_target == 'linux'
+        run: |
+          cp backend/streamdeck-server frontend/src-tauri/binaries/streamdeck-server-${{ matrix.target }}
+          chmod +x frontend/src-tauri/binaries/streamdeck-server-${{ matrix.target }}
+
+      - name: Copy backend binary (Windows)
+        if: matrix.backend_target == 'windows'
+        shell: bash
+        run: |
+          cp backend/streamdeck-server.exe frontend/src-tauri/binaries/streamdeck-server-${{ matrix.target }}.exe
+
+      # ============================================
+      # Setup Frontend Build Environment
+      # ============================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri -> target
+
+      # Linux-specific dependencies
+      - name: Install Linux dependencies
+        if: matrix.backend_target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
+
+      # ============================================
+      # Build Frontend
+      # ============================================
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli
+
+      - name: Build Tauri App (Linux)
+        if: matrix.backend_target == 'linux'
+        working-directory: frontend
+        run: npx tauri build --target ${{ matrix.target }} --bundles deb
+
+      - name: Build Tauri App (Windows)
+        if: matrix.backend_target == 'windows'
+        working-directory: frontend
+        run: npx tauri build --target ${{ matrix.target }} --bundles nsis
+
+      # ============================================
+      # Upload Artifacts
+      # ============================================
+      - name: Upload Linux artifacts
+        if: matrix.backend_target == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            frontend/src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+          if-no-files-found: error
+
+      - name: Upload Windows artifacts
+        if: matrix.backend_target == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            frontend/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+  # ============================================
+  # Create Release (on tag push)
+  # ============================================
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

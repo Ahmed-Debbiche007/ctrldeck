@@ -1,0 +1,292 @@
+package services
+
+import (
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
+
+	"streamdeck-server/internal/core/actions"
+	"streamdeck-server/internal/models"
+)
+
+// SystemMetricsService collects and broadcasts system metrics
+type SystemMetricsService struct {
+	mu             sync.RWMutex
+	currentMetrics models.SystemMetrics
+	subscribers    map[chan models.SystemMetrics]bool
+	subscribersMu  sync.RWMutex
+	stopChan       chan struct{}
+	micController  *actions.MicController
+	volController  *actions.VolumeController
+	prevNetStats   []net.IOCountersStat
+	prevNetTime    time.Time
+}
+
+// NewSystemMetricsService creates a new SystemMetricsService
+func NewSystemMetricsService() *SystemMetricsService {
+	return &SystemMetricsService{
+		subscribers:   make(map[chan models.SystemMetrics]bool),
+		stopChan:      make(chan struct{}),
+		micController: actions.NewMicController(),
+		volController: actions.NewVolumeController(),
+	}
+}
+
+// Start begins collecting metrics at regular intervals
+func (s *SystemMetricsService) Start(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		// Collect initial metrics
+		s.collectMetrics()
+
+		for {
+			select {
+			case <-ticker.C:
+				s.collectMetrics()
+				s.broadcast()
+			case <-s.stopChan:
+				return
+			}
+		}
+	}()
+}
+
+// Stop stops the metrics collection
+func (s *SystemMetricsService) Stop() {
+	close(s.stopChan)
+}
+
+// Subscribe returns a channel that receives metric updates
+func (s *SystemMetricsService) Subscribe() chan models.SystemMetrics {
+	ch := make(chan models.SystemMetrics, 10)
+	s.subscribersMu.Lock()
+	s.subscribers[ch] = true
+	s.subscribersMu.Unlock()
+	return ch
+}
+
+// Unsubscribe removes a subscriber
+func (s *SystemMetricsService) Unsubscribe(ch chan models.SystemMetrics) {
+	s.subscribersMu.Lock()
+	delete(s.subscribers, ch)
+	close(ch)
+	s.subscribersMu.Unlock()
+}
+
+// GetCurrentMetrics returns the current metrics
+func (s *SystemMetricsService) GetCurrentMetrics() models.SystemMetrics {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.currentMetrics
+}
+
+// collectMetrics gathers all system metrics
+func (s *SystemMetricsService) collectMetrics() {
+	metrics := models.SystemMetrics{
+		Timestamp: time.Now().Unix(),
+	}
+
+	// CPU Usage
+	cpuPercent, err := cpu.Percent(0, false)
+	if err == nil && len(cpuPercent) > 0 {
+		metrics.CPUUsage = cpuPercent[0]
+	}
+
+	// Memory Usage
+	memInfo, err := mem.VirtualMemory()
+	if err == nil {
+		metrics.RAMUsage = memInfo.UsedPercent
+		metrics.RAMTotal = memInfo.Total
+		metrics.RAMUsed = memInfo.Used
+	}
+
+	// Battery (if available)
+	metrics.BatteryLevel, metrics.IsCharging = s.getBatteryInfo()
+
+	// CPU Temperature
+	metrics.CPUTemp = s.getCPUTemperature()
+
+	// Mic muted state
+	muted, err := s.micController.IsMuted()
+	if err == nil {
+		metrics.MicMuted = muted
+	}
+
+	// Volume level
+	vol, err := s.volController.GetVolume()
+	if err == nil {
+		metrics.VolumeLevel = vol
+	}
+
+	// Network speed
+	metrics.NetworkUpload, metrics.NetworkDown = s.getNetworkSpeed()
+
+	s.mu.Lock()
+	s.currentMetrics = metrics
+	s.mu.Unlock()
+}
+
+// broadcast sends metrics to all subscribers
+func (s *SystemMetricsService) broadcast() {
+	s.subscribersMu.RLock()
+	defer s.subscribersMu.RUnlock()
+
+	metrics := s.GetCurrentMetrics()
+	for ch := range s.subscribers {
+		select {
+		case ch <- metrics:
+		default:
+			// Skip if channel is full
+		}
+	}
+}
+
+// getBatteryInfo returns battery level and charging status
+func (s *SystemMetricsService) getBatteryInfo() (int, bool) {
+	// Try to get battery info using gopsutil
+	sensors, err := host.SensorsTemperatures()
+	if err != nil {
+		return -1, false
+	}
+
+	// Look for battery sensor
+	for _, sensor := range sensors {
+		if sensor.SensorKey == "BAT0" || sensor.SensorKey == "battery" {
+			return int(sensor.Temperature), false
+		}
+	}
+
+	// Alternative: Read from /sys/class/power_supply on Linux
+	return s.getBatteryInfoLinux()
+}
+
+// getBatteryInfoLinux reads battery info from sysfs
+func (s *SystemMetricsService) getBatteryInfoLinux() (int, bool) {
+	// Try common battery paths
+	paths := []string{
+		"/sys/class/power_supply/BAT0",
+		"/sys/class/power_supply/BAT1",
+	}
+
+	for _, basePath := range paths {
+		capacity, err := readFileAsInt(basePath + "/capacity")
+		if err != nil {
+			continue
+		}
+
+		status, _ := readFileAsString(basePath + "/status")
+		isCharging := status == "Charging"
+
+		return capacity, isCharging
+	}
+
+	return -1, false
+}
+
+// getCPUTemperature returns the CPU temperature
+func (s *SystemMetricsService) getCPUTemperature() float64 {
+	temps, err := host.SensorsTemperatures()
+	if err != nil {
+		return 0
+	}
+
+	// Look for CPU temperature sensors
+	cpuTempKeys := []string{
+		"coretemp_core_0",
+		"coretemp_package_id_0",
+		"k10temp_tdie",
+		"cpu_thermal",
+		"CPU",
+		"Core 0",
+	}
+
+	for _, temp := range temps {
+		for _, key := range cpuTempKeys {
+			if temp.SensorKey == key {
+				return temp.Temperature
+			}
+		}
+	}
+
+	// Return first temperature if no specific CPU temp found
+	if len(temps) > 0 {
+		return temps[0].Temperature
+	}
+
+	return 0
+}
+
+// getNetworkSpeed calculates network upload/download speeds
+func (s *SystemMetricsService) getNetworkSpeed() (float64, float64) {
+	netStats, err := net.IOCounters(false)
+	if err != nil || len(netStats) == 0 {
+		return 0, 0
+	}
+
+	currentTime := time.Now()
+	currentStats := netStats[0]
+
+	if s.prevNetStats == nil {
+		s.prevNetStats = netStats
+		s.prevNetTime = currentTime
+		return 0, 0
+	}
+
+	elapsed := currentTime.Sub(s.prevNetTime).Seconds()
+	if elapsed <= 0 {
+		return 0, 0
+	}
+
+	prevStats := s.prevNetStats[0]
+
+	uploadSpeed := float64(currentStats.BytesSent-prevStats.BytesSent) / elapsed
+	downloadSpeed := float64(currentStats.BytesRecv-prevStats.BytesRecv) / elapsed
+
+	s.prevNetStats = netStats
+	s.prevNetTime = currentTime
+
+	return uploadSpeed, downloadSpeed
+}
+
+// Helper functions
+func readFileAsInt(path string) (int, error) {
+	content, err := readFileAsString(path)
+	if err != nil {
+		return 0, err
+	}
+
+	var value int
+	_, err = parseIntFromString(content, &value)
+	return value, err
+}
+
+func readFileAsString(path string) (string, error) {
+	data, err := readFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func readFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
+
+func parseIntFromString(s string, value *int) (int, error) {
+	s = strings.TrimSpace(s)
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, err
+	}
+	*value = n
+	return n, nil
+}
