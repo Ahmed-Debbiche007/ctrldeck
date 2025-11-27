@@ -1,0 +1,2 @@
+# This directory is used to store the backend binary for Electron builds
+# The actual binaries are generated during CI/CD and should not be committed
