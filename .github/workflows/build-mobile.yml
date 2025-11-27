@@ -9,6 +9,10 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,6 +22,15 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 11076708
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses || true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -42,13 +55,41 @@ jobs:
         working-directory: mobile-client
         run: npx cap sync android
 
+      - name: Fix flatDir warnings in build.gradle files
+        working-directory: mobile-client/android
+        run: |
+          # Only remove flatDir if there are no AAR files in the libs directories
+          # This prevents warnings while ensuring functionality isn't broken
+          
+          # Check and fix app/build.gradle
+          if grep -q "flatDir" app/build.gradle 2>/dev/null; then
+            if [ ! -d "app/libs" ] || [ -z "$(ls -A app/libs 2>/dev/null)" ]; then
+              echo "No AAR files in app/libs, removing flatDir from app/build.gradle"
+              sed -i '/flatDir.*dirs.*libs/d' app/build.gradle
+            else
+              echo "AAR files found in app/libs, keeping flatDir"
+            fi
+          fi
+          
+          # Check and fix capacitor-cordova-android-plugins/build.gradle
+          if [ -f "capacitor-cordova-android-plugins/build.gradle" ]; then
+            if grep -q "flatDir" capacitor-cordova-android-plugins/build.gradle; then
+              if [ ! -d "capacitor-cordova-android-plugins/libs" ] || [ -z "$(ls -A capacitor-cordova-android-plugins/libs 2>/dev/null)" ]; then
+                echo "No AAR files in capacitor-cordova-android-plugins/libs, removing flatDir"
+                sed -i '/flatDir.*dirs.*libs/d' capacitor-cordova-android-plugins/build.gradle
+              else
+                echo "AAR files found in capacitor-cordova-android-plugins/libs, keeping flatDir"
+              fi
+            fi
+          fi
+
       - name: Make gradlew executable
         working-directory: mobile-client/android
         run: chmod +x ./gradlew
 
       - name: Build APK
         working-directory: mobile-client/android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Rename APK
         run: |
