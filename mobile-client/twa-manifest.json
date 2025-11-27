@@ -1,0 +1,46 @@
+{
+  "packageId": "com.debbiche007.streamdeck",
+  "host": "ahmed-debbiche007.github.io",
+  "name": "StreamDeck",
+  "launcherName": "StreamDeck",
+  "display": "standalone",
+  "themeColor": "#3b82f6",
+  "navigationColor": "#1f2937",
+  "navigationColorDark": "#111827",
+  "navigationDividerColor": "#1f2937",
+  "navigationDividerColorDark": "#111827",
+  "backgroundColor": "#1f2937",
+  "enableNotifications": false,
+  "startUrl": "/streamdeck/mobile/",
+  "iconUrl": "https://ahmed-debbiche007.github.io/streamdeck/mobile/icons/icon-512x512.png",
+  "maskableIconUrl": "https://ahmed-debbiche007.github.io/streamdeck/mobile/icons/icon-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://ahmed-debbiche007.github.io/streamdeck/mobile/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": false
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://ahmed-debbiche007.github.io/streamdeck/mobile/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": []
+}
