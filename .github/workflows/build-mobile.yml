@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-android:
-    name: Build Android APK (EAS)
+    name: Build Android APK (Local)
     runs-on: ubuntu-latest
 
     steps:
@@ -20,6 +20,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: mobile-client/package-lock.json
 
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Setup Expo and EAS
         uses: expo/expo-github-action@v8
         with:
@@ -30,45 +39,10 @@ jobs:
         working-directory: mobile-client
         run: npm ci
 
-      - name: Build Android APK
-        working-directory: mobile-client
-        run: eas build --profile production --platform android --non-interactive --no-wait --json > build-info.json
-
-      - name: Get build ID
-        id: build-id
+      - name: Build Android APK locally
         working-directory: mobile-client
         run: |
-          BUILD_ID=$(cat build-info.json | jq -r '.[0].id')
-          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
-
-      - name: Wait for build to complete and download
-        working-directory: mobile-client
-        run: |
-          echo "Waiting for EAS build to complete..."
-          eas build:view ${{ steps.build-id.outputs.build_id }} --json > build-status.json
-          
-          # Poll until build is complete
-          while true; do
-            STATUS=$(cat build-status.json | jq -r '.status')
-            echo "Build status: $STATUS"
-            
-            if [ "$STATUS" = "FINISHED" ]; then
-              echo "Build completed successfully!"
-              break
-            elif [ "$STATUS" = "ERRORED" ] || [ "$STATUS" = "CANCELED" ]; then
-              echo "Build failed with status: $STATUS"
-              exit 1
-            fi
-            
-            echo "Waiting 30 seconds..."
-            sleep 30
-            eas build:view ${{ steps.build-id.outputs.build_id }} --json > build-status.json
-          done
-          
-          # Download the APK
-          ARTIFACT_URL=$(cat build-status.json | jq -r '.artifacts.buildUrl')
-          echo "Downloading APK from: $ARTIFACT_URL"
-          curl -L -o CtrlDeck-android.apk "$ARTIFACT_URL"
+          eas build --local --platform android --profile production --non-interactive --output CtrlDeck-android.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

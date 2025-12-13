@@ -7,22 +7,37 @@ on:
         description: 'Release version (e.g., v1.0.0)'
         required: true
         type: string
+      build_android:
+        description: 'Build Android APK'
+        type: boolean
+        default: false
+      build_linux:
+        description: 'Build Linux .deb'
+        type: boolean
+        default: false
+      build_windows:
+        description: 'Build Windows .exe'
+        type: boolean
+        default: false
 
 jobs:
-  # Build Android APK
+  # Build Android APK (if selected)
   build-mobile:
     name: Build Mobile
+    if: ${{ inputs.build_android }}
     uses: ./.github/workflows/build-mobile.yml
     secrets: inherit
 
-  # Build Linux .deb Package
+  # Build Linux .deb Package (if selected)
   build-linux:
     name: Build Linux
+    if: ${{ inputs.build_linux }}
     uses: ./.github/workflows/build-desktop-linux.yml
 
-  # Build Windows Executable
+  # Build Windows Executable (if selected)
   build-windows:
     name: Build Windows
+    if: ${{ inputs.build_windows }}
     uses: ./.github/workflows/build-desktop-windows.yml
 
   # Create Release with all artifacts
@@ -30,30 +45,74 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build-mobile, build-linux, build-windows]
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
     permissions:
       contents: write
+      actions: read
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download Android APK
+      - name: Create release artifacts directory
+        run: mkdir -p release-artifacts
+
+      # Download Android APK - from current build or latest workflow
+      - name: Download Android APK (current build)
+        if: ${{ inputs.build_android }}
         uses: actions/download-artifact@v4
         with:
           name: android-apk
           path: release-artifacts/
 
-      - name: Download Linux .deb
+      - name: Download Android APK (from latest workflow)
+        if: ${{ !inputs.build_android }}
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: build-mobile.yml
+          name: android-apk
+          path: release-artifacts/
+          search_artifacts: true
+          if_no_artifact_found: fail
+
+      # Download Linux .deb - from current build or latest workflow
+      - name: Download Linux .deb (current build)
+        if: ${{ inputs.build_linux }}
         uses: actions/download-artifact@v4
         with:
           name: linux-deb
           path: release-artifacts/
 
-      - name: Download Windows Executable
+      - name: Download Linux .deb (from latest workflow)
+        if: ${{ !inputs.build_linux }}
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: build-desktop-linux.yml
+          name: linux-deb
+          path: release-artifacts/
+          search_artifacts: true
+          if_no_artifact_found: fail
+
+      # Download Windows Executable - from current build or latest workflow
+      - name: Download Windows Executable (current build)
+        if: ${{ inputs.build_windows }}
         uses: actions/download-artifact@v4
         with:
           name: windows-build
           path: release-artifacts/
+
+      - name: Download Windows Executable (from latest workflow)
+        if: ${{ !inputs.build_windows }}
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: build-desktop-windows.yml
+          name: windows-build
+          path: release-artifacts/
+          search_artifacts: true
+          if_no_artifact_found: fail
 
       - name: Rename artifacts to CtrlDeck
         run: |
