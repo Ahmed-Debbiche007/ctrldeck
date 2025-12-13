@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-android:
-    name: Build Android APK (Local)
+    name: Build Android APK (EAS Cloud)
     runs-on: ubuntu-latest
 
     steps:
@@ -20,15 +20,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: mobile-client/package-lock.json
 
-      - name: Setup Java JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Expo and EAS
         uses: expo/expo-github-action@v8
         with:
@@ -39,10 +30,19 @@ jobs:
         working-directory: mobile-client
         run: npm ci
 
-      - name: Build Android APK locally
+      - name: Build Android APK on EAS
         working-directory: mobile-client
         run: |
-          eas build --local --platform android --profile production --non-interactive --output CtrlDeck-android.apk
+          eas build --platform android --profile production --non-interactive --wait --json > build-result.json
+          cat build-result.json
+
+      - name: Download APK from EAS
+        working-directory: mobile-client
+        run: |
+          # Extract the build URL from the JSON output
+          BUILD_URL=$(cat build-result.json | jq -r '.[0].artifacts.buildUrl')
+          echo "Downloading APK from: $BUILD_URL"
+          curl -L -o CtrlDeck-android.apk "$BUILD_URL"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://ahmed-debbiche007.github.io/ctrldeck/">
+<a target="_blank" href="https://ahmed-debbiche007.github.io/ctrldeck/">
   <img src="assets/ctrldeck.png" alt="CtrlDeck Logo" height="128">
 </a>
 </p>

@@ -47,7 +47,8 @@
         {
           "cameraPermission": "Allow CtrlDeck to access your camera to scan QR codes."
         }
-      ]
+      ],
+      "./plugins/withAndroidNetworkConfig"
     ],
     "extra": {
       "eas": {

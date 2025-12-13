@@ -112,7 +112,7 @@ func (s *SystemMetricsService) collectMetrics() {
 	}
 
 	// Battery (if available)
-	metrics.BatteryLevel, metrics.IsCharging = s.getBatteryInfo()
+	metrics.BatteryLevel, metrics.IsCharging = s.getBatteryInfoPlatform()
 
 	// CPU Temperature
 	metrics.CPUTemp = s.getCPUTemperature()
@@ -162,48 +162,6 @@ func (s *SystemMetricsService) broadcast() {
 			// Skip if channel is full
 		}
 	}
-}
-
-// getBatteryInfo returns battery level and charging status
-func (s *SystemMetricsService) getBatteryInfo() (int, bool) {
-	// Try to get battery info using gopsutil
-	sensors, err := host.SensorsTemperatures()
-	if err != nil {
-		return -1, false
-	}
-
-	// Look for battery sensor
-	for _, sensor := range sensors {
-		if sensor.SensorKey == "BAT0" || sensor.SensorKey == "battery" {
-			return int(sensor.Temperature), false
-		}
-	}
-
-	// Alternative: Read from /sys/class/power_supply on Linux
-	return s.getBatteryInfoLinux()
-}
-
-// getBatteryInfoLinux reads battery info from sysfs
-func (s *SystemMetricsService) getBatteryInfoLinux() (int, bool) {
-	// Try common battery paths
-	paths := []string{
-		"/sys/class/power_supply/BAT0",
-		"/sys/class/power_supply/BAT1",
-	}
-
-	for _, basePath := range paths {
-		capacity, err := readFileAsInt(basePath + "/capacity")
-		if err != nil {
-			continue
-		}
-
-		status, _ := readFileAsString(basePath + "/status")
-		isCharging := status == "Charging"
-
-		return capacity, isCharging
-	}
-
-	return -1, false
 }
 
 // getCPUTemperature returns the CPU temperature
