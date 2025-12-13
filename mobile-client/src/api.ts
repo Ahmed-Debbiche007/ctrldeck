@@ -1,151 +1,159 @@
-import type { Button, Widget, Script, InstalledApp, SystemMetrics } from './types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Button, SystemMetrics, Widget } from '@/types';
 
-const STORAGE_KEY = 'streamdeck_api_url';
+const STORAGE_KEY = 'ctrldeck_api_url';
 const DEFAULT_API_BASE = 'http://localhost:8080';
 
-// Get API base URL from localStorage or default
-export function getApiBase(): string {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem(STORAGE_KEY) || DEFAULT_API_BASE;
+// Cache for API base URL
+let cachedApiBase: string | null = null;
+
+// Get API base URL from AsyncStorage or default
+export async function getApiBase(): Promise<string> {
+  if (cachedApiBase !== null) {
+    return cachedApiBase;
   }
-  return DEFAULT_API_BASE;
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    cachedApiBase = stored || DEFAULT_API_BASE;
+    return cachedApiBase;
+  } catch {
+    return DEFAULT_API_BASE;
+  }
+}
+
+// Get API base URL synchronously (uses cache)
+export function getApiBaseSync(): string {
+  return cachedApiBase || DEFAULT_API_BASE;
 }
 
 // Set API base URL
-export function setApiBase(url: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, url);
+export async function setApiBase(url: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, url);
+    cachedApiBase = url;
+  } catch (error) {
+    console.error('Failed to save API URL:', error);
   }
 }
 
 // Check if API is configured (not default)
-export function isConfigured(): boolean {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem(STORAGE_KEY) !== null;
+export async function isConfigured(): Promise<boolean> {
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    return stored !== null;
+  } catch {
+    return false;
   }
-  return false;
 }
 
 // Clear API configuration
-export function clearConfig(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(STORAGE_KEY);
+export async function clearConfig(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    cachedApiBase = null;
+  } catch (error) {
+    console.error('Failed to clear config:', error);
+  }
+}
+
+// Initialize the cache on app start
+export async function initializeApi(): Promise<void> {
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    cachedApiBase = stored || DEFAULT_API_BASE;
+  } catch {
+    cachedApiBase = DEFAULT_API_BASE;
   }
 }
 
 // Get WebSocket base URL from API base
-function getWsBase(): string {
-  const apiBase = getApiBase();
+function getWsBase(apiBase: string): string {
   return apiBase.replace(/^http/, 'ws');
 }
 
-// Button APIs
+// Button APIs (read-only)
 export async function getButtons(): Promise<Button[]> {
-  const res = await fetch(`${getApiBase()}/api/buttons`);
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/buttons`);
   return res.json();
 }
 
-export async function createButton(button: Omit<Button, 'id'>): Promise<Button> {
-  const res = await fetch(`${getApiBase()}/api/buttons`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(button),
-  });
+export async function getWidgets(): Promise<Widget[]> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/widgets`);
   return res.json();
-}
-
-export async function deleteButton(id: string): Promise<void> {
-  await fetch(`${getApiBase()}/api/buttons/${id}`, { method: 'DELETE' });
 }
 
 export async function executeAction(buttonId: string): Promise<{ success: boolean; message: string }> {
-  const res = await fetch(`${getApiBase()}/api/action/${buttonId}`, { method: 'POST' });
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/action/${buttonId}`, { method: 'POST' });
   return res.json();
-}
-
-export async function reorderButtons(buttonIds: string[]): Promise<void> {
-  await fetch(`${getApiBase()}/api/buttons/reorder`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ button_ids: buttonIds }),
-  });
-}
-
-// Widget APIs
-export async function getWidgets(): Promise<Widget[]> {
-  const res = await fetch(`${getApiBase()}/api/widgets`);
-  return res.json();
-}
-
-export async function createWidget(widget: Omit<Widget, 'id'>): Promise<Widget> {
-  const res = await fetch(`${getApiBase()}/api/widgets`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(widget),
-  });
-  return res.json();
-}
-
-export async function updateWidgets(widgets: Widget[]): Promise<void> {
-  await fetch(`${getApiBase()}/api/widgets`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(widgets),
-  });
-}
-
-// Script APIs
-export async function getScripts(): Promise<Script[]> {
-  const res = await fetch(`${getApiBase()}/api/scripts`);
-  return res.json();
-}
-
-export async function createScript(script: Omit<Script, 'id'>): Promise<Script> {
-  const res = await fetch(`${getApiBase()}/api/scripts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(script),
-  });
-  return res.json();
-}
-
-export async function deleteScript(id: string): Promise<void> {
-  await fetch(`${getApiBase()}/api/scripts/${id}`, { method: 'DELETE' });
-}
-
-// App APIs
-export async function getApps(): Promise<InstalledApp[]> {
-  const res = await fetch(`${getApiBase()}/api/apps`);
-  return res.json();
-}
-
-export async function searchApps(query: string): Promise<InstalledApp[]> {
-  const res = await fetch(`${getApiBase()}/api/apps/search?q=${encodeURIComponent(query)}`);
-  return res.json();
-}
-
-export async function refreshApps(): Promise<void> {
-  await fetch(`${getApiBase()}/api/apps/refresh`, { method: 'POST' });
 }
 
 // System Metrics (HTTP)
 export async function getSystemMetrics(): Promise<SystemMetrics> {
-  const res = await fetch(`${getApiBase()}/api/system/metrics`);
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/system/metrics`);
+  return res.json();
+}
+
+// Weather Data
+export interface WeatherData {
+  temperature: number;
+  weather_code: number;
+  humidity: number;
+  location: string;
+  latitude: number;
+  longitude: number;
+  last_updated: number;
+  description: string;
+}
+
+export async function getWeatherData(): Promise<WeatherData> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/system/weather`);
+  return res.json();
+}
+
+// Volume Control
+export async function setVolume(level: number): Promise<{ success: boolean; message: string }> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/system/volume`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level }),
+  });
+  return res.json();
+}
+
+// Brightness Control
+export async function setBrightness(level: number): Promise<{ success: boolean; message: string }> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/system/brightness`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level }),
+  });
   return res.json();
 }
 
 // WebSocket Connection
-export function connectWebSocket(
+export async function connectWebSocket(
   onMetrics: (metrics: SystemMetrics) => void,
-  onError?: (error: Event) => void
-): WebSocket {
-  const ws = new WebSocket(`${getWsBase()}/ws/system`);
+  onError?: (error: Event) => void,
+  onConfigChange?: (changedType: string) => void
+): Promise<WebSocket> {
+  const apiBase = await getApiBase();
+  const wsBase = getWsBase(apiBase);
+  const ws = new WebSocket(`${wsBase}/ws/system`);
 
   ws.onmessage = (event) => {
     try {
       const message = JSON.parse(event.data);
       if (message.type === 'metrics' && message.data) {
         onMetrics(message.data);
+      } else if (message.type === 'config_changed' && message.data) {
+        onConfigChange?.(message.data.changed);
       }
     } catch (e) {
       console.error('Failed to parse WebSocket message:', e);
@@ -163,10 +171,15 @@ export function connectWebSocket(
 // Test connection to API
 export async function testConnection(url: string): Promise<boolean> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     const res = await fetch(`${url}/api/buttons`, {
       method: 'GET',
-      signal: AbortSignal.timeout(5000),
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
     return res.ok;
   } catch {
     return false;

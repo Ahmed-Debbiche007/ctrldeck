@@ -13,8 +13,9 @@ export type ActionType =
   | 'mute_mic'
   | 'volume_up'
   | 'volume_down'
-  | 'set_volume'
   | 'volume_mute'
+  | 'volume_knob'
+  | 'brightness_knob'
   | 'launch_app'
   | 'run_script'
   | 'open_url';
@@ -27,7 +28,7 @@ export interface Widget {
   enabled: boolean;
 }
 
-export type WidgetType = 'cpu' | 'ram' | 'battery' | 'network' | 'volume' | 'temperature';
+export type WidgetType = 'cpu' | 'ram' | 'battery' | 'network' | 'volume' | 'temperature' | 'clock' | 'weather';
 
 // Script Types
 export interface Script {
@@ -55,7 +56,9 @@ export interface SystemMetrics {
   is_charging: boolean;
   cpu_temp: number;
   mic_muted: boolean;
+  volume_muted: boolean;
   volume_level: number;
+  brightness_level: number;
   network_upload: number;
   network_download: number;
   timestamp: number;

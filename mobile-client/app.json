@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "CtrlDeck",
+    "slug": "ctrldeck-mobile",
+    "owner": "ahmeddebbiche007",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ctrldeck.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to scan QR codes for server connection."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ctrldeck.mobile",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true
+    },
+    "web": {
+      "favicon": "./assets/ctrldeck.svg"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow CtrlDeck to access your camera to scan QR codes."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5c36b2c2-9be7-4f0d-9d03-efd378a58388"
+      }
+    }
+  }
+}
