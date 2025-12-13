@@ -9,6 +9,7 @@ let backendProcess = null;
 let backendPort = null;
 let tray = null;
 let isQuitting = false;
+let firewallOpened = false;
 
 // Get the path to the app icon
 function getIconPath() {
@@ -102,6 +103,114 @@ function waitForBackend(port, maxRetries = 30, retryDelay = 500) {
   });
 }
 
+// Open firewall port to expose backend to the network
+async function openFirewallPort(port) {
+  return new Promise((resolve) => {
+    console.log(`Opening firewall port ${port}...`);
+    
+    let proc;
+    
+    if (process.platform === "linux") {
+      // Use pkexec for GUI authentication on Linux with UFW
+      proc = spawn("pkexec", ["ufw", "allow", `${port}/tcp`, "comment", "CtrlDeck"]);
+    } else if (process.platform === "win32") {
+      // Windows - use netsh (requires admin elevation)
+      proc = spawn("netsh", [
+        "advfirewall", "firewall", "add", "rule",
+        `name=CtrlDeck-${port}`,
+        "dir=in",
+        "action=allow",
+        "protocol=tcp",
+        `localport=${port}`
+      ], { shell: true });
+    } else if (process.platform === "darwin") {
+      // macOS - firewall is typically handled differently
+      console.log("macOS firewall management not implemented - may prompt for access automatically");
+      resolve(true);
+      return;
+    } else {
+      console.log(`Firewall management not supported on ${process.platform}`);
+      resolve(false);
+      return;
+    }
+
+    proc.stdout?.on("data", (data) => {
+      console.log(`Firewall stdout: ${data}`);
+    });
+
+    proc.stderr?.on("data", (data) => {
+      console.error(`Firewall stderr: ${data}`);
+    });
+
+    proc.on("error", (err) => {
+      console.error("Failed to open firewall port:", err);
+      resolve(false);
+    });
+
+    proc.on("close", (code) => {
+      if (code === 0) {
+        console.log(`Firewall port ${port} opened successfully`);
+        firewallOpened = true;
+        resolve(true);
+      } else {
+        console.log(`Firewall command exited with code ${code} - port may not be open`);
+        resolve(false);
+      }
+    });
+  });
+}
+
+// Close firewall port when app closes
+async function closeFirewallPort(port) {
+  return new Promise((resolve) => {
+    if (!firewallOpened || !port) {
+      resolve(true);
+      return;
+    }
+    
+    console.log(`Closing firewall port ${port}...`);
+    
+    let proc;
+    
+    if (process.platform === "linux") {
+      // Use pkexec for GUI authentication on Linux with UFW
+      proc = spawn("pkexec", ["ufw", "delete", "allow", `${port}/tcp`]);
+    } else if (process.platform === "win32") {
+      // Windows - use netsh
+      proc = spawn("netsh", [
+        "advfirewall", "firewall", "delete", "rule",
+        `name=CtrlDeck-${port}`
+      ], { shell: true });
+    } else {
+      resolve(true);
+      return;
+    }
+
+    proc.stdout?.on("data", (data) => {
+      console.log(`Firewall stdout: ${data}`);
+    });
+
+    proc.stderr?.on("data", (data) => {
+      console.error(`Firewall stderr: ${data}`);
+    });
+
+    proc.on("error", (err) => {
+      console.error("Failed to close firewall port:", err);
+      resolve(false);
+    });
+
+    proc.on("close", (code) => {
+      if (code === 0) {
+        console.log(`Firewall port ${port} closed successfully`);
+      } else {
+        console.log(`Firewall delete command exited with code ${code}`);
+      }
+      firewallOpened = false;
+      resolve(true);
+    });
+  });
+}
+
 // Get the path to the backend binary
 function getBackendPath() {
   const isPackaged = app.isPackaged;
@@ -163,6 +272,13 @@ async function startBackend() {
     await waitForBackend(backendPort);
     console.log("Backend is ready");
 
+    // Open firewall port to expose backend to the network
+    try {
+      await openFirewallPort(backendPort);
+    } catch (err) {
+      console.log("Firewall configuration skipped or failed:", err.message);
+    }
+
     return backendPort;
   } catch (error) {
     console.error("Error starting backend:", error);
@@ -171,7 +287,16 @@ async function startBackend() {
 }
 
 // Stop the backend server
-function stopBackend() {
+async function stopBackend() {
+  // Close firewall port first
+  if (firewallOpened && backendPort) {
+    try {
+      await closeFirewallPort(backendPort);
+    } catch (err) {
+      console.log("Failed to close firewall port:", err.message);
+    }
+  }
+
   if (backendProcess) {
     console.log("Stopping backend...");
 
