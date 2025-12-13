@@ -12,15 +12,15 @@ import (
 	"syscall"
 	"time"
 
-	"streamdeck-server/internal/api"
-	"streamdeck-server/internal/config"
-	"streamdeck-server/internal/services"
+	"ctrldeck-server/internal/api"
+	"ctrldeck-server/internal/config"
+	"ctrldeck-server/internal/services"
 )
 
 func main() {
 	// Command line flags
 	port := flag.Int("port", 8080, "Server port")
-	configDir := flag.String("config", "", "Configuration directory (default: ~/.streamdeck)")
+	configDir := flag.String("config", "", "Configuration directory (default: ~/.ctrldeck)")
 	staticDir := flag.String("static", "", "Static files directory for frontend")
 	flag.Parse()
 
@@ -31,10 +31,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to get home directory: %v", err)
 		}
-		cfgDir = filepath.Join(homeDir, ".streamdeck")
+		cfgDir = filepath.Join(homeDir, ".ctrldeck")
 	}
 
-	log.Printf("Starting Stream Deck Server...")
+	log.Printf("Starting CtrlDeck Server...")
 	log.Printf("Config directory: %s", cfgDir)
 	log.Printf("Port: %d", *port)
 
@@ -47,6 +47,7 @@ func main() {
 	// Initialize services
 	metricsService := services.NewSystemMetricsService()
 	appService := services.NewAppDiscoveryService()
+	weatherService := services.NewWeatherService(cfgDir)
 
 	// Start metrics collection (every second)
 	metricsService.Start(1 * time.Second)
@@ -68,6 +69,7 @@ func main() {
 		Store:          store,
 		MetricsService: metricsService,
 		AppService:     appService,
+		WeatherService: weatherService,
 		StaticDir:      *staticDir,
 		AllowedOrigins: nil, // Use defaults
 	})
@@ -98,6 +100,7 @@ func main() {
 		log.Printf("  GET  /api/apps          - List installed apps")
 		log.Printf("  GET  /api/apps/search   - Search apps")
 		log.Printf("  GET  /api/system/metrics - Get system metrics")
+		log.Printf("  GET  /api/system/weather - Get weather data (cached)")
 		log.Printf("  WS   /ws/system         - WebSocket for real-time metrics")
 		log.Printf("  GET  /health            - Health check")
 

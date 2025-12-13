@@ -13,8 +13,9 @@ jobs:
   build-mobile:
     name: Build Mobile
     uses: ./.github/workflows/build-mobile.yml
+    secrets: inherit
 
-  # Build Linux AppImage
+  # Build Linux .deb Package
   build-linux:
     name: Build Linux
     uses: ./.github/workflows/build-desktop-linux.yml
@@ -42,41 +43,46 @@ jobs:
           name: android-apk
           path: release-artifacts/
 
-      - name: Download Linux AppImage
+      - name: Download Linux .deb
         uses: actions/download-artifact@v4
         with:
-          name: linux-appimage
+          name: linux-deb
           path: release-artifacts/
 
       - name: Download Windows Executable
         uses: actions/download-artifact@v4
         with:
-          name: windows-exe
+          name: windows-build
           path: release-artifacts/
 
-      - name: List artifacts
-        run: ls -la release-artifacts/
+      - name: Rename artifacts to CtrlDeck
+        run: |
+          cd release-artifacts
+          # Rename files if they have StreamDeck prefix
+          [ -f "StreamDeck-linux.deb" ] && mv StreamDeck-linux.deb CtrlDeck-linux.deb || true
+          [ -f "StreamDeck-windows.exe" ] && mv StreamDeck-windows.exe CtrlDeck-windows.exe || true
+          ls -la
 
       - name: Create release zip
         run: |
           cd release-artifacts
-          zip -r ../StreamDeck-${{ inputs.version }}.zip .
+          zip -r ../CtrlDeck-${{ inputs.version }}.zip .
           cd ..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ inputs.version }}
-          name: StreamDeck ${{ inputs.version }}
+          name: CtrlDeck ${{ inputs.version }}
           body: |
-            ## StreamDeck ${{ inputs.version }}
+            ## CtrlDeck ${{ inputs.version }}
             
             ### Downloads
             
             This release includes:
-            - **Android APK**: `StreamDeck-android.apk`
-            - **Linux AppImage**: `StreamDeck-linux.AppImage`
-            - **Windows Portable**: `StreamDeck-windows.exe`
+            - **Android APK**: `CtrlDeck-android.apk`
+            - **Linux .deb**: `CtrlDeck-linux.deb`
+            - **Windows Portable**: `CtrlDeck-windows.exe`
             
             ### Installation
             
@@ -84,18 +90,18 @@ jobs:
             Download and install the APK on your Android device. You may need to enable "Install from unknown sources".
             
             #### Linux
-            1. Download the AppImage
-            2. Make it executable: `chmod +x StreamDeck-linux.AppImage`
-            3. Run: `./StreamDeck-linux.AppImage`
+            ```bash
+            sudo dpkg -i CtrlDeck-linux.deb
+            ```
             
             #### Windows
             Download and run the portable executable. No installation required.
             
           files: |
-            StreamDeck-${{ inputs.version }}.zip
-            release-artifacts/StreamDeck-android.apk
-            release-artifacts/StreamDeck-linux.AppImage
-            release-artifacts/StreamDeck-windows.exe
+            CtrlDeck-${{ inputs.version }}.zip
+            release-artifacts/CtrlDeck-android.apk
+            release-artifacts/CtrlDeck-linux.deb
+            release-artifacts/CtrlDeck-windows.exe
           draft: false
           prerelease: false
         env:

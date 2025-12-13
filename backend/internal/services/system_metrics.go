@@ -12,30 +12,32 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 
-	"streamdeck-server/internal/core/actions"
-	"streamdeck-server/internal/models"
+	"ctrldeck-server/internal/core/actions"
+	"ctrldeck-server/internal/models"
 )
 
 // SystemMetricsService collects and broadcasts system metrics
 type SystemMetricsService struct {
-	mu             sync.RWMutex
-	currentMetrics models.SystemMetrics
-	subscribers    map[chan models.SystemMetrics]bool
-	subscribersMu  sync.RWMutex
-	stopChan       chan struct{}
-	micController  *actions.MicController
-	volController  *actions.VolumeController
-	prevNetStats   []net.IOCountersStat
-	prevNetTime    time.Time
+	mu                   sync.RWMutex
+	currentMetrics       models.SystemMetrics
+	subscribers          map[chan models.SystemMetrics]bool
+	subscribersMu        sync.RWMutex
+	stopChan             chan struct{}
+	micController        *actions.MicController
+	volController        *actions.VolumeController
+	brightnessController *actions.BrightnessController
+	prevNetStats         []net.IOCountersStat
+	prevNetTime          time.Time
 }
 
 // NewSystemMetricsService creates a new SystemMetricsService
 func NewSystemMetricsService() *SystemMetricsService {
 	return &SystemMetricsService{
-		subscribers:   make(map[chan models.SystemMetrics]bool),
-		stopChan:      make(chan struct{}),
-		micController: actions.NewMicController(),
-		volController: actions.NewVolumeController(),
+		subscribers:          make(map[chan models.SystemMetrics]bool),
+		stopChan:             make(chan struct{}),
+		micController:        actions.NewMicController(),
+		volController:        actions.NewVolumeController(),
+		brightnessController: actions.NewBrightnessController(),
 	}
 }
 
@@ -125,6 +127,18 @@ func (s *SystemMetricsService) collectMetrics() {
 	vol, err := s.volController.GetVolume()
 	if err == nil {
 		metrics.VolumeLevel = vol
+	}
+
+	// Volume muted state
+	volMuted, err := s.volController.IsMuted()
+	if err == nil {
+		metrics.VolumeMuted = volMuted
+	}
+
+	// Brightness level
+	brightness, err := s.brightnessController.GetBrightness()
+	if err == nil {
+		metrics.BrightnessLevel = brightness
 	}
 
 	// Network speed

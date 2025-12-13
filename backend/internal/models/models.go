@@ -42,18 +42,20 @@ type InstalledApp struct {
 
 // SystemMetrics represents real-time system metrics
 type SystemMetrics struct {
-	CPUUsage      float64 `json:"cpu_usage"`
-	RAMUsage      float64 `json:"ram_usage"`
-	RAMTotal      uint64  `json:"ram_total"`
-	RAMUsed       uint64  `json:"ram_used"`
-	BatteryLevel  int     `json:"battery_level"`
-	IsCharging    bool    `json:"is_charging"`
-	CPUTemp       float64 `json:"cpu_temp"`
-	MicMuted      bool    `json:"mic_muted"`
-	VolumeLevel   int     `json:"volume_level"`
-	NetworkUpload float64 `json:"network_upload"`   // bytes per second
-	NetworkDown   float64 `json:"network_download"` // bytes per second
-	Timestamp     int64   `json:"timestamp"`
+	CPUUsage        float64 `json:"cpu_usage"`
+	RAMUsage        float64 `json:"ram_usage"`
+	RAMTotal        uint64  `json:"ram_total"`
+	RAMUsed         uint64  `json:"ram_used"`
+	BatteryLevel    int     `json:"battery_level"`
+	IsCharging      bool    `json:"is_charging"`
+	CPUTemp         float64 `json:"cpu_temp"`
+	MicMuted        bool    `json:"mic_muted"`
+	VolumeMuted     bool    `json:"volume_muted"`
+	VolumeLevel     int     `json:"volume_level"`
+	BrightnessLevel int     `json:"brightness_level"`
+	NetworkUpload   float64 `json:"network_upload"`   // bytes per second
+	NetworkDown     float64 `json:"network_download"` // bytes per second
+	Timestamp       int64   `json:"timestamp"`
 }
 
 // ActionRequest represents a request to execute an action

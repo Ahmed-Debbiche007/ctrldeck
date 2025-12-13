@@ -1,6 +1,6 @@
-# Stream Deck Server - Usage Guide
+# CtrlDeck Server - Usage Guide
 
-A Go-based backend for a custom Stream Deck system that runs on your PC. It provides REST APIs for button management, script execution, app launching, and WebSocket streaming for real-time system metrics.
+A Go-based backend for a custom CtrlDeck system that runs on your PC. It provides REST APIs for button management, script execution, app launching, and WebSocket streaming for real-time system metrics.
 
 ## Quick Start
 
@@ -14,7 +14,7 @@ cd backend
 go run ./cmd/server/
 
 # Or use the compiled binary
-./streamdeck-server
+./ctrldeck-server
 ```
 
 The server will start on `http://localhost:8080` by default.
@@ -24,7 +24,7 @@ The server will start on `http://localhost:8080` by default.
 ```bash
 cd backend
 go mod tidy
-go build -o streamdeck-server ./cmd/server/
+go build -o ctrldeck-server ./cmd/server/
 ```
 
 ## Command Line Options
@@ -32,25 +32,25 @@ go build -o streamdeck-server ./cmd/server/
 | Flag | Default | Description |
 |------|---------|-------------|
 | `-port` | `8080` | Server port |
-| `-config` | `~/.streamdeck` | Configuration directory |
+| `-config` | `~/.ctrldeck` | Configuration directory |
 | `-static` | (empty) | Static files directory for serving frontend |
 
 ### Examples
 
 ```bash
 # Run on a different port
-./streamdeck-server -port 3001
+./ctrldeck-server -port 3001
 
 # Use custom config directory
-./streamdeck-server -config /path/to/config
+./ctrldeck-server -config /path/to/config
 
 # Serve React frontend build
-./streamdeck-server -static ./dist
+./ctrldeck-server -static ./dist
 ```
 
 ## Configuration
 
-Configuration files are stored in `~/.streamdeck/` by default:
+Configuration files are stored in `~/.ctrldeck/` by default:
 
 - `buttons.json` - Button configurations
 - `scripts.json` - Custom script definitions
@@ -362,7 +362,7 @@ Send commands to the server:
 const ws = new WebSocket('ws://localhost:8080/ws/system');
 
 ws.onopen = () => {
-  console.log('Connected to Stream Deck server');
+  console.log('Connected to CtrlDeck server');
 };
 
 ws.onmessage = (event) => {

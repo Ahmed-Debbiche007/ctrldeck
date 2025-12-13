@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"streamdeck-server/internal/services"
+	"ctrldeck-server/internal/services"
 )
 
 // AppsHandler handles installed apps HTTP requests

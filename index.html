@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CtrlDeck - Press Responsibly</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/ctrldeck.svg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .glow {
+            box-shadow: 0 0 60px rgba(59, 130, 246, 0.3), 0 0 100px rgba(139, 92, 246, 0.2);
+        }
+        .card-glow:hover {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-white font-sans antialiased">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/50">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center">
+                        <img src="./assets/ctrldeck.svg" alt="CtrlDeck Logo" class="w-12 h-12" />
+                    </div>
+                    <span class="text-xl font-bold">CtrlDeck</span>
+                </div>
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-gray-400 hover:text-white transition-colors">Features</a>
+                    <a href="#platforms" class="text-gray-400 hover:text-white transition-colors">Platforms</a>
+                    <a href="https://github.com/Ahmed-Debbiche007/streamdeck" class="bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded-lg font-medium transition-colors">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="min-h-screen flex items-center justify-center pt-20 px-6">
+        <div class="max-w-5xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 bg-gray-800/50 border border-gray-700/50 rounded-full px-4 py-2 mb-8">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-sm text-gray-400">Open Source & Free Forever</span>
+            </div>
+            <h1 class="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
+                Your Desktop,<br>
+                <span class="gradient-text">Under Control</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-400 mb-4 max-w-2xl mx-auto">
+                Transform your phone or tablet into a powerful macro pad.
+                Control apps, scripts, and system settings with a single tap.
+            </p>
+            <p class="text-lg text-purple-400 font-medium mb-12 italic">
+                Press responsibly.
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="https://github.com/Ahmed-Debbiche007/streamdeck" class="w-full sm:w-auto bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-4 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 glow">
+                    Download Now
+                </a>
+                <a href="https://github.com/Ahmed-Debbiche007/streamdeck" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 border border-gray-700 px-8 py-4 rounded-xl font-semibold text-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-32 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">Powerful Features</h2>
+                <p class="text-xl text-gray-400 max-w-2xl mx-auto">Everything you need to supercharge your workflow</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Feature Card 1 -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 transition-all card-glow hover:border-gray-700">
+                    <div class="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Custom Buttons</h3>
+                    <p class="text-gray-400">Create unlimited buttons with custom icons, colors, and actions. Organize them your way.</p>
+                </div>
+                <!-- Feature Card 2 -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 transition-all card-glow hover:border-gray-700">
+                    <div class="w-14 h-14 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-7 h-7 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Script Execution</h3>
+                    <p class="text-gray-400">Run shell scripts and commands with one tap. Automate any task on your system.</p>
+                </div>
+                <!-- Feature Card 3 -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 transition-all card-glow hover:border-gray-700">
+                    <div class="w-14 h-14 bg-pink-500/10 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-7 h-7 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">App Launcher</h3>
+                    <p class="text-gray-400">Quick access to all your installed applications. Launch any app instantly.</p>
+                </div>
+                <!-- Feature Card 4 -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 transition-all card-glow hover:border-gray-700">
+                    <div class="w-14 h-14 bg-green-500/10 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-7 h-7 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">System Metrics</h3>
+                    <p class="text-gray-400">Real-time CPU, RAM, and disk usage monitoring. Stay informed about your system.</p>
+                </div>
+                <!-- Feature Card 5 -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 transition-all card-glow hover:border-gray-700">
+                    <div class="w-14 h-14 bg-yellow-500/10 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Volume Control</h3>
+                    <p class="text-gray-400">Adjust system volume and brightness with intuitive sliders and knobs.</p>
+                </div>
+                <!-- Feature Card 6 -->
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-8 transition-all card-glow hover:border-gray-700">
+                    <div class="w-14 h-14 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-7 h-7 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Wireless Connection</h3>
+                    <p class="text-gray-400">Connect via WiFi with QR code scanning. No cables, no hassle.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Platforms Section -->
+    <section id="platforms" class="py-32 px-6 bg-gray-900/30">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">Multi-Platform</h2>
+                <p class="text-xl text-gray-400 max-w-2xl mx-auto">Use it anywhere, control from everywhere</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Desktop -->
+                <div class="text-center">
+                    <div class="w-20 h-20 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3">Desktop Client</h3>
+                    <p class="text-gray-400 mb-4">Electron-based app for Linux and Windows. Configure your buttons and manage actions.</p>
+                    <span class="inline-block bg-blue-500/10 text-blue-400 px-4 py-1 rounded-full text-sm">Available Now</span>
+                </div>
+                <!-- Mobile -->
+                <div class="text-center">
+                    <div class="w-20 h-20 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-10 h-10 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3">Mobile App</h3>
+                    <p class="text-gray-400 mb-4">React Native app for Android. Turn your phone into a powerful macro pad.</p>
+                    <span class="inline-block bg-purple-500/10 text-purple-400 px-4 py-1 rounded-full text-sm">Android</span>
+                </div>
+                <!-- Backend -->
+                <div class="text-center">
+                    <div class="w-20 h-20 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-3">Go Backend</h3>
+                    <p class="text-gray-400 mb-4">Lightning-fast Go server with WebSocket support for real-time communication.</p>
+                    <span class="inline-block bg-green-500/10 text-green-400 px-4 py-1 rounded-full text-sm">Self-Hosted</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-32 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-4xl md:text-5xl font-bold mb-6">Ready to Take Control?</h2>
+            <p class="text-xl text-gray-400 mb-8">Start using CtrlDeck today. It's free, open source, and always will be.</p>
+            <a href="https://github.com/Ahmed-Debbiche007/streamdeck" class="inline-flex items-center gap-2 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-10 py-5 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 glow">
+                Get Started Free
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                </svg>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-6 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center">
+                        <img src="./assets/ctrldeck.svg" alt="CtrlDeck Logo" class="w-12 h-12" />
+                    </div>
+                    <span class="font-semibold">CtrlDeck</span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400 text-sm">Press responsibly.</span>
+                </div>
+                
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

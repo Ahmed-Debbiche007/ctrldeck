@@ -143,7 +143,7 @@ export function ConnectionPage() {
               <div className="text-sm">
                 <p className="text-blue-400 font-medium mb-1">How to connect:</p>
                 <ol className="text-gray-400 space-y-1 list-decimal list-inside">
-                  <li>Open the Stream Deck app on your phone</li>
+                  <li>Open the CtrlDeck app on your phone</li>
                   <li>Scan this QR code or enter the URL manually</li>
                   <li>Make sure both devices are on the same network</li>
                 </ol>

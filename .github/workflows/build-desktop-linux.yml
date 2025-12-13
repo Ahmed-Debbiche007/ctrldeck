@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-linux:
-    name: Build Linux AppImage
+    name: Build Linux .deb Package
     runs-on: ubuntu-latest
     
     steps:
@@ -49,18 +49,21 @@ jobs:
         working-directory: desktop-client
         run: npm run electron:build:linux
 
-      - name: Rename output
+      - name: Find and rename .deb package
         run: |
           mkdir -p artifacts
-          cp desktop-client/release/*.AppImage artifacts/StreamDeck-linux.AppImage || true
-          # If AppImage not found, try to find any Linux output
-          if [ ! -f artifacts/StreamDeck-linux.AppImage ]; then
-            find desktop-client/release -name "*.AppImage" -exec cp {} artifacts/StreamDeck-linux.AppImage \; || true
+          DEB_FILE=$(find desktop-client/release -name "*.deb" | head -1)
+          if [ -n "$DEB_FILE" ]; then
+            cp "$DEB_FILE" artifacts/StreamDeck-linux.deb
+            echo "Found and copied: $DEB_FILE"
+          else
+            echo "Warning: No .deb file found"
+            ls -la desktop-client/release/
           fi
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-appimage
-          path: artifacts/StreamDeck-linux.AppImage
+          name: linux-deb
+          path: artifacts/StreamDeck-linux.deb
           retention-days: 30

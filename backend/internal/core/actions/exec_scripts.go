@@ -25,7 +25,7 @@ func NewScriptExecutor(allowedDirs []string) *ScriptExecutor {
 		homeDir, _ := os.UserHomeDir()
 		allowedDirs = []string{
 			filepath.Join(homeDir, "scripts"),
-			filepath.Join(homeDir, ".streamdeck", "scripts"),
+			filepath.Join(homeDir, ".ctrldeck", "scripts"),
 			"/usr/local/bin",
 		}
 	}

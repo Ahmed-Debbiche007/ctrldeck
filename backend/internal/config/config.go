@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"streamdeck-server/internal/models"
+	"ctrldeck-server/internal/models"
 )
 
 // Store manages configuration persistence
@@ -102,6 +102,36 @@ func (s *Store) initDefaults() error {
 				ID:       "widget-battery",
 				Type:     "battery",
 				Position: 2,
+				Enabled:  true,
+			},
+			{
+				ID:       "widget-temperature",
+				Type:     "temperature",
+				Position: 3,
+				Enabled:  true,
+			},
+			{
+				ID:       "widget-volume",
+				Type:     "volume",
+				Position: 4,
+				Enabled:  true,
+			},
+			{
+				ID:       "widget-network",
+				Type:     "network",
+				Position: 5,
+				Enabled:  true,
+			},
+			{
+				ID:       "widget-clock",
+				Type:     "clock",
+				Position: 6,
+				Enabled:  true,
+			},
+			{
+				ID:       "widget-weather",
+				Type:     "weather",
+				Position: 6,
 				Enabled:  true,
 			},
 		}

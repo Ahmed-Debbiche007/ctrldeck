@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"streamdeck-server/internal/config"
-	"streamdeck-server/internal/models"
+	"ctrldeck-server/internal/config"
+	"ctrldeck-server/internal/models"
 )
 
 // ScriptsHandler handles script-related HTTP requests

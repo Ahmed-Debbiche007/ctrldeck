@@ -8,18 +8,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"streamdeck-server/internal/config"
-	"streamdeck-server/internal/models"
+	"ctrldeck-server/internal/config"
+	"ctrldeck-server/internal/models"
 )
 
 // ButtonsHandler handles button-related HTTP requests
 type ButtonsHandler struct {
-	store *config.Store
+	store     *config.Store
+	wsHandler *WebSocketHandler
 }
 
 // NewButtonsHandler creates a new ButtonsHandler
-func NewButtonsHandler(store *config.Store) *ButtonsHandler {
-	return &ButtonsHandler{store: store}
+func NewButtonsHandler(store *config.Store, wsHandler *WebSocketHandler) *ButtonsHandler {
+	return &ButtonsHandler{store: store, wsHandler: wsHandler}
 }
 
 // GetButtons returns all buttons
@@ -61,6 +62,11 @@ func (h *ButtonsHandler) CreateButton(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Broadcast config change to all clients
+	if h.wsHandler != nil {
+		h.wsHandler.BroadcastConfigChange("buttons")
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(button)
@@ -79,6 +85,11 @@ func (h *ButtonsHandler) DeleteButton(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Broadcast config change to all clients
+	if h.wsHandler != nil {
+		h.wsHandler.BroadcastConfigChange("buttons")
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -93,6 +104,11 @@ func (h *ButtonsHandler) ReorderButtons(w http.ResponseWriter, r *http.Request) 
 	if err := h.store.ReorderButtons(req.ButtonIDs); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Broadcast config change to all clients
+	if h.wsHandler != nil {
+		h.wsHandler.BroadcastConfigChange("buttons")
 	}
 
 	w.WriteHeader(http.StatusOK)

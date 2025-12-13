@@ -4,6 +4,7 @@ import { ActionsPage } from './pages/ActionsPage';
 import { MetricsPage } from './pages/MetricsPage';
 import { ConnectionPage } from './pages/ConnectionPage';
 import './App.css';
+import logo from './assets/ctrldeck.svg'
 
 type Page = 'actions' | 'metrics' | 'connection';
 
@@ -27,13 +28,13 @@ function App() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 p-4 border-b border-gray-800">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-            <Zap size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+            <img src={logo} alt="CtrlDeck Logo" className={sidebarOpen ? "w-10 h-10" : "w-12 h-12"} />
           </div>
           {sidebarOpen && (
             <div className="overflow-hidden">
-              <h1 className="font-bold text-lg text-white whitespace-nowrap">Stream Deck</h1>
-              <p className="text-xs text-gray-500 whitespace-nowrap">Control Center</p>
+              <h1 className="font-bold text-lg text-white whitespace-nowrap">CtrlDeck</h1>
+              <p className="text-xs text-gray-500 whitespace-nowrap">Press responsibly</p>
             </div>
           )}
         </div>

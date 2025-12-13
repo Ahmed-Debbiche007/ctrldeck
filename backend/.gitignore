@@ -2,7 +2,7 @@
 # Go Binaries
 # ========================
 # Compiled binaries
-streamdeck-server
+ctrldeck-server
 *.exe
 *.exe~
 *.dll

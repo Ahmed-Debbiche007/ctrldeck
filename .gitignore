@@ -63,7 +63,7 @@ out/
 *.dll
 *.so
 *.dylib
-streamdeck-server
+ctrldeck-server
 
 # Test binary
 *.test

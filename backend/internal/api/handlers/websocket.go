@@ -8,8 +8,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"streamdeck-server/internal/models"
-	"streamdeck-server/internal/services"
+	"ctrldeck-server/internal/models"
+	"ctrldeck-server/internal/services"
 )
 
 var upgrader = websocket.Upgrader{
@@ -177,4 +177,27 @@ func (h *WebSocketHandler) GetClientCount() int {
 	h.clientsMu.RLock()
 	defer h.clientsMu.RUnlock()
 	return len(h.clients)
+}
+
+// BroadcastConfigChange sends a config change notification to all connected clients
+func (h *WebSocketHandler) BroadcastConfigChange(changedType string) {
+	h.clientsMu.RLock()
+	defer h.clientsMu.RUnlock()
+
+	message := map[string]interface{}{
+		"type": "config_changed",
+		"data": map[string]string{
+			"changed": changedType,
+		},
+	}
+
+	for conn := range h.clients {
+		go func(c *websocket.Conn) {
+			if err := c.WriteJSON(message); err != nil {
+				log.Printf("Error sending config change to client: %v", err)
+			}
+		}(conn)
+	}
+
+	log.Printf("Broadcasted config change: %s to %d clients", changedType, len(h.clients))
 }

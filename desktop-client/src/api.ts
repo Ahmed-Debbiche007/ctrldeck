@@ -48,6 +48,15 @@ export async function createButton(button: Omit<Button, 'id'>): Promise<Button> 
   return res.json();
 }
 
+export async function updateButton(button: Button): Promise<Button> {
+  const res = await fetch(`${API_BASE}/api/buttons`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(button),
+  });
+  return res.json();
+}
+
 export async function deleteButton(id: string): Promise<void> {
   await fetch(`${API_BASE}/api/buttons/${id}`, { method: 'DELETE' });
 }
@@ -125,6 +134,137 @@ export async function refreshApps(): Promise<void> {
 // System Metrics (HTTP)
 export async function getSystemMetrics(): Promise<SystemMetrics> {
   const res = await fetch(`${API_BASE}/api/system/metrics`);
+  return res.json();
+}
+
+// Weather Data
+export interface WeatherData {
+  temperature: number;
+  weather_code: number;
+  humidity: number;
+  location: string;
+  latitude: number;
+  longitude: number;
+  last_updated: number;
+  description: string;
+  location_source: 'manual' | 'browser' | 'ip';
+}
+
+export async function getWeatherData(): Promise<WeatherData> {
+  const res = await fetch(`${API_BASE}/api/system/weather`);
+  return res.json();
+}
+
+// Location Settings
+export interface LocationSettings {
+  latitude?: number;
+  longitude?: number;
+  city?: string;
+  source: 'manual' | 'browser' | 'ip';
+  updated_at?: number;
+  message?: string;
+}
+
+export async function getLocationSettings(): Promise<LocationSettings> {
+  const res = await fetch(`${API_BASE}/api/settings/location`);
+  return res.json();
+}
+
+export async function setLocation(
+  latitude: number,
+  longitude: number,
+  city: string,
+  source: 'manual' | 'browser'
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/api/settings/location`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ latitude, longitude, city, source }),
+  });
+  return res.json();
+}
+
+export async function clearLocation(): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/api/settings/location`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+// Browser Geolocation Helper
+export function requestBrowserLocation(): Promise<{ latitude: number; longitude: number }> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is not supported by this browser'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      (error) => {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            reject(new Error('Location permission denied'));
+            break;
+          case error.POSITION_UNAVAILABLE:
+            reject(new Error('Location information unavailable'));
+            break;
+          case error.TIMEOUT:
+            reject(new Error('Location request timed out'));
+            break;
+          default:
+            reject(new Error('Unknown location error'));
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  });
+}
+
+// Reverse geocoding to get city name from coordinates
+export async function reverseGeocode(latitude: number, longitude: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`,
+      {
+        headers: {
+          'User-Agent': 'CtrlDeck-App',
+        },
+      }
+    );
+    const data = await res.json();
+    return data.address?.city || data.address?.town || data.address?.village || data.address?.county || 'Unknown';
+  } catch {
+    return 'Unknown';
+  }
+}
+
+// Volume Control
+export async function setVolume(level: number): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/api/system/volume`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level }),
+  });
+  return res.json();
+}
+
+// Brightness Control
+export async function setBrightness(level: number): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/api/system/brightness`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level }),
+  });
   return res.json();
 }
 

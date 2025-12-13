@@ -63,6 +63,14 @@ func (v *VolumeController) ToggleMute() error {
 	return v.toggleMuteWindows()
 }
 
+// IsMuted returns whether the volume is currently muted
+func (v *VolumeController) IsMuted() (bool, error) {
+	if runtime.GOOS == "linux" {
+		return v.isMutedLinux()
+	}
+	return v.isMutedWindows()
+}
+
 // Linux implementations using pactl (PulseAudio)
 func (v *VolumeController) volumeUpLinux(step int) error {
 	cmd := exec.Command("pactl", "set-sink-volume", "@DEFAULT_SINK@", fmt.Sprintf("+%d%%", step))
@@ -125,6 +133,18 @@ func (v *VolumeController) getVolumeLinuxFallback() (int, error) {
 func (v *VolumeController) toggleMuteLinux() error {
 	cmd := exec.Command("pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle")
 	return cmd.Run()
+}
+
+func (v *VolumeController) isMutedLinux() (bool, error) {
+	cmd := exec.Command("pactl", "get-sink-mute", "@DEFAULT_SINK@")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+
+	// Parse output like: "Mute: yes" or "Mute: no"
+	outputStr := strings.TrimSpace(string(output))
+	return strings.Contains(outputStr, "yes"), nil
 }
 
 // Windows implementations
@@ -262,4 +282,55 @@ func (v *VolumeController) toggleMuteWindows() error {
 	script := `$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]173)`
 	cmd := exec.Command("powershell", "-Command", script)
 	return cmd.Run()
+}
+
+func (v *VolumeController) isMutedWindows() (bool, error) {
+	script := `
+Add-Type -TypeDefinition @"
+using System.Runtime.InteropServices;
+[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioEndpointVolume {
+    int f(); int g(); int h(); int i();
+    int SetMasterVolumeLevelScalar(float fLevel, System.Guid pguidEventContext);
+    int j();
+    int GetMasterVolumeLevelScalar(out float pfLevel);
+    int k(); int l(); int m(); int n();
+    int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, System.Guid pguidEventContext);
+    int GetMute(out bool pbMute);
+}
+[Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDevice {
+    int Activate(ref System.Guid id, int clsCtx, int activationParams, out IAudioEndpointVolume aev);
+}
+[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDeviceEnumerator {
+    int f();
+    int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+}
+[ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumeratorComObject { }
+public class Audio {
+    static IAudioEndpointVolume Vol() {
+        var enumerator = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;
+        IMMDevice dev = null;
+        Marshal.ThrowExceptionForHR(enumerator.GetDefaultAudioEndpoint(0, 1, out dev));
+        IAudioEndpointVolume epv = null;
+        var epvid = typeof(IAudioEndpointVolume).GUID;
+        Marshal.ThrowExceptionForHR(dev.Activate(ref epvid, 23, 0, out epv));
+        return epv;
+    }
+    public static bool Mute {
+        get { bool mute; Marshal.ThrowExceptionForHR(Vol().GetMute(out mute)); return mute; }
+    }
+}
+"@
+[Audio]::Mute
+`
+	cmd := exec.Command("powershell", "-Command", script)
+	output, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+
+	outputStr := strings.TrimSpace(string(output))
+	return outputStr == "True", nil
 }

@@ -9,35 +9,46 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"streamdeck-server/internal/config"
-	"streamdeck-server/internal/core/actions"
-	"streamdeck-server/internal/models"
-	"streamdeck-server/internal/services"
+	"ctrldeck-server/internal/config"
+	"ctrldeck-server/internal/core/actions"
+	"ctrldeck-server/internal/models"
+	"ctrldeck-server/internal/services"
 )
 
 // SystemHandler handles system-related HTTP requests including action execution
 type SystemHandler struct {
-	store          *config.Store
-	micController  *actions.MicController
-	volController  *actions.VolumeController
-	appLauncher    *actions.AppLauncher
-	scriptExecutor *actions.ScriptExecutor
-	metricsService *services.SystemMetricsService
+	store                *config.Store
+	micController        *actions.MicController
+	volController        *actions.VolumeController
+	brightnessController *actions.BrightnessController
+	appLauncher          *actions.AppLauncher
+	scriptExecutor       *actions.ScriptExecutor
+	metricsService       *services.SystemMetricsService
+	weatherService       *services.WeatherService
+	wsHandler            *WebSocketHandler
 }
 
 // NewSystemHandler creates a new SystemHandler
 func NewSystemHandler(
 	store *config.Store,
 	metricsService *services.SystemMetricsService,
+	weatherService *services.WeatherService,
 ) *SystemHandler {
 	return &SystemHandler{
-		store:          store,
-		micController:  actions.NewMicController(),
-		volController:  actions.NewVolumeController(),
-		appLauncher:    actions.NewAppLauncher(),
-		scriptExecutor: actions.NewScriptExecutor(nil),
-		metricsService: metricsService,
+		store:                store,
+		micController:        actions.NewMicController(),
+		volController:        actions.NewVolumeController(),
+		brightnessController: actions.NewBrightnessController(),
+		appLauncher:          actions.NewAppLauncher(),
+		scriptExecutor:       actions.NewScriptExecutor(nil),
+		metricsService:       metricsService,
+		weatherService:       weatherService,
 	}
+}
+
+// SetWebSocketHandler sets the WebSocket handler for broadcasting config changes
+func (h *SystemHandler) SetWebSocketHandler(wsHandler *WebSocketHandler) {
+	h.wsHandler = wsHandler
 }
 
 // ExecuteAction executes an action for a button
@@ -81,11 +92,20 @@ func (h *SystemHandler) executeButtonAction(button *models.Button) models.Action
 	case "volume_down":
 		step := h.getIntParam(button.ActionData, "step", 5)
 		return h.volumeDown(step)
-	case "set_volume":
-		level := h.getIntParam(button.ActionData, "level", 50)
-		return h.setVolume(level)
 	case "volume_mute":
 		return h.toggleVolumeMute()
+	case "volume_knob":
+		// Volume knob is handled via the /api/system/volume endpoint directly
+		return models.ActionResponse{
+			Success: true,
+			Message: "Volume knob is interactive - use direct volume control",
+		}
+	case "brightness_knob":
+		// Brightness knob is handled via the /api/system/brightness endpoint directly
+		return models.ActionResponse{
+			Success: true,
+			Message: "Brightness knob is interactive - use direct brightness control",
+		}
 	case "launch_app":
 		appPath := button.ActionData["app_path"]
 		return h.launchApp(appPath)
@@ -144,19 +164,6 @@ func (h *SystemHandler) volumeDown(step int) models.ActionResponse {
 	return models.ActionResponse{
 		Success: true,
 		Message: "Volume: " + strconv.Itoa(vol) + "%",
-	}
-}
-
-// setVolume sets the volume to a specific level
-func (h *SystemHandler) setVolume(level int) models.ActionResponse {
-	err := h.volController.SetVolume(level)
-	if err != nil {
-		return models.ActionResponse{Success: false, Error: err.Error()}
-	}
-
-	return models.ActionResponse{
-		Success: true,
-		Message: "Volume set to " + strconv.Itoa(level) + "%",
 	}
 }
 
@@ -248,6 +255,70 @@ func (h *SystemHandler) GetSystemMetrics(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(metrics)
 }
 
+// SetVolumeLevel sets the system volume to a specific level
+func (h *SystemHandler) SetVolumeLevel(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Level int `json:"level"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.sendError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Clamp level between 0 and 100
+	if req.Level < 0 {
+		req.Level = 0
+	}
+	if req.Level > 100 {
+		req.Level = 100
+	}
+
+	err := h.volController.SetVolume(req.Level)
+	if err != nil {
+		h.sendError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.ActionResponse{
+		Success: true,
+		Message: "Volume set to " + strconv.Itoa(req.Level) + "%",
+	})
+}
+
+// SetBrightnessLevel sets the screen brightness to a specific level
+func (h *SystemHandler) SetBrightnessLevel(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Level int `json:"level"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.sendError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Clamp level between 0 and 100
+	if req.Level < 0 {
+		req.Level = 0
+	}
+	if req.Level > 100 {
+		req.Level = 100
+	}
+
+	err := h.brightnessController.SetBrightness(req.Level)
+	if err != nil {
+		h.sendError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.ActionResponse{
+		Success: true,
+		Message: "Brightness set to " + strconv.Itoa(req.Level) + "%",
+	})
+}
+
 // Helper functions
 func (h *SystemHandler) getIntParam(data map[string]string, key string, defaultVal int) int {
 	if val, ok := data[key]; ok {
@@ -321,4 +392,127 @@ func (h *SystemHandler) GetServerInfo(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// GetWeather returns cached weather data
+func (h *SystemHandler) GetWeather(w http.ResponseWriter, r *http.Request) {
+	if h.weatherService == nil {
+		h.sendError(w, "Weather service not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	weather, err := h.weatherService.GetWeather()
+	if err != nil {
+		h.sendError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(weather)
+}
+
+// LocationResponse represents the location settings response
+type LocationResponse struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	City      string  `json:"city"`
+	Source    string  `json:"source"`
+	UpdatedAt int64   `json:"updated_at"`
+}
+
+// GetLocation returns the current saved location settings
+func (h *SystemHandler) GetLocation(w http.ResponseWriter, r *http.Request) {
+	if h.weatherService == nil {
+		h.sendError(w, "Weather service not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	location := h.weatherService.GetSavedLocation()
+	if location == nil {
+		// No saved location - return empty response indicating IP-based fallback
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"source":  "ip",
+			"message": "No saved location, using IP-based geolocation",
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(LocationResponse{
+		Latitude:  location.Latitude,
+		Longitude: location.Longitude,
+		City:      location.City,
+		Source:    string(location.Source),
+		UpdatedAt: location.UpdatedAt,
+	})
+}
+
+// SetLocationRequest represents the request to set location
+type SetLocationRequest struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	City      string  `json:"city"`
+	Source    string  `json:"source"` // "manual" or "browser"
+}
+
+// SetLocation saves a new location
+func (h *SystemHandler) SetLocation(w http.ResponseWriter, r *http.Request) {
+	if h.weatherService == nil {
+		h.sendError(w, "Weather service not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	var req SetLocationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.sendError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate source
+	source := services.LocationSourceBrowser
+	if req.Source == "manual" {
+		source = services.LocationSourceManual
+	}
+
+	// Save the location
+	if err := h.weatherService.SetLocation(req.Latitude, req.Longitude, req.City, source); err != nil {
+		h.sendError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Broadcast location change to all clients
+	if h.wsHandler != nil {
+		h.wsHandler.BroadcastConfigChange("location")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.ActionResponse{
+		Success: true,
+		Message: "Location saved successfully",
+	})
+}
+
+// ClearLocation removes the saved location (reverts to IP-based)
+func (h *SystemHandler) ClearLocation(w http.ResponseWriter, r *http.Request) {
+	if h.weatherService == nil {
+		h.sendError(w, "Weather service not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	if err := h.weatherService.ClearLocation(); err != nil {
+		h.sendError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Broadcast location change to all clients
+	if h.wsHandler != nil {
+		h.wsHandler.BroadcastConfigChange("location")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.ActionResponse{
+		Success: true,
+		Message: "Location cleared, reverted to IP-based geolocation",
+	})
 }

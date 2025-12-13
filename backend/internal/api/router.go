@@ -7,9 +7,9 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
 
-	"streamdeck-server/internal/api/handlers"
-	"streamdeck-server/internal/config"
-	"streamdeck-server/internal/services"
+	"ctrldeck-server/internal/api/handlers"
+	"ctrldeck-server/internal/config"
+	"ctrldeck-server/internal/services"
 )
 
 // RouterConfig holds configuration for the router
@@ -17,6 +17,7 @@ type RouterConfig struct {
 	Store          *config.Store
 	MetricsService *services.SystemMetricsService
 	AppService     *services.AppDiscoveryService
+	WeatherService *services.WeatherService
 	StaticDir      string
 	AllowedOrigins []string
 }
@@ -43,12 +44,14 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Use(corsHandler.Handler)
 
 	// Initialize handlers
-	buttonsHandler := handlers.NewButtonsHandler(cfg.Store)
-	scriptsHandler := handlers.NewScriptsHandler(cfg.Store)
-	widgetsHandler := handlers.NewWidgetsHandler(cfg.Store)
-	appsHandler := handlers.NewAppsHandler(cfg.AppService)
-	systemHandler := handlers.NewSystemHandler(cfg.Store, cfg.MetricsService)
+	// WebSocket handler must be created first so it can be passed to other handlers
 	wsHandler := handlers.NewWebSocketHandler(cfg.MetricsService)
+	buttonsHandler := handlers.NewButtonsHandler(cfg.Store, wsHandler)
+	scriptsHandler := handlers.NewScriptsHandler(cfg.Store)
+	widgetsHandler := handlers.NewWidgetsHandler(cfg.Store, wsHandler)
+	appsHandler := handlers.NewAppsHandler(cfg.AppService)
+	systemHandler := handlers.NewSystemHandler(cfg.Store, cfg.MetricsService, cfg.WeatherService)
+	systemHandler.SetWebSocketHandler(wsHandler)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -88,8 +91,24 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		// System metrics (HTTP endpoint)
 		r.Get("/system/metrics", systemHandler.GetSystemMetrics)
 
+		// Volume control (direct volume setting)
+		r.Post("/system/volume", systemHandler.SetVolumeLevel)
+
+		// Brightness control (direct brightness setting)
+		r.Post("/system/brightness", systemHandler.SetBrightnessLevel)
+
 		// Server info (IP addresses)
 		r.Get("/system/info", systemHandler.GetServerInfo)
+
+		// Weather (cached, refreshed hourly)
+		r.Get("/system/weather", systemHandler.GetWeather)
+
+		// Location settings for weather
+		r.Route("/settings/location", func(r chi.Router) {
+			r.Get("/", systemHandler.GetLocation)
+			r.Post("/", systemHandler.SetLocation)
+			r.Delete("/", systemHandler.ClearLocation)
+		})
 	})
 
 	// WebSocket endpoint for real-time metrics

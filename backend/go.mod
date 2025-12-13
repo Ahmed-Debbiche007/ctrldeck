@@ -1,4 +1,4 @@
-module streamdeck-server
+module ctrldeck-server
 
 go 1.22
 

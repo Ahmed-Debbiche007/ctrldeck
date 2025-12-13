@@ -49,18 +49,23 @@ jobs:
         working-directory: desktop-client
         run: npm run electron:build:win
 
-      - name: Rename output
+      - name: Find and rename output
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts
-          $exeFile = Get-ChildItem -Path "desktop-client/release" -Filter "*.exe" | Select-Object -First 1
+          # Find the portable exe (typically named "StreamDeck <version>.exe" or similar)
+          $exeFile = Get-ChildItem -Path "desktop-client/release" -Filter "*.exe" -Recurse | Where-Object { $_.Name -notlike "*-unpacked*" } | Select-Object -First 1
           if ($exeFile) {
             Copy-Item $exeFile.FullName "artifacts/StreamDeck-windows.exe"
+            Write-Host "Found and copied: $($exeFile.Name)"
+          } else {
+            Write-Host "Warning: No exe file found in release directory"
+            Get-ChildItem -Path "desktop-client/release" -Recurse | ForEach-Object { Write-Host $_.FullName }
           }
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-exe
+          name: windows-build
           path: artifacts/StreamDeck-windows.exe
           retention-days: 30

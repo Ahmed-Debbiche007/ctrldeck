@@ -25,5 +25,5 @@ dist-ssr
 
 # Electron
 release/
-extraResources/streamdeck-server
-extraResources/streamdeck-server.exe
+extraResources/ctrldeck-server
+extraResources/ctrldeck-server.exe

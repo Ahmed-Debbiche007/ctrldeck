@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"streamdeck-server/internal/models"
+	"ctrldeck-server/internal/models"
 )
 
 // AppDiscoveryService discovers installed applications on the system
