@@ -1,4 +1,4 @@
-package actions
+package volume
 
 // VolumeController handles volume control operations
 type VolumeController struct{}

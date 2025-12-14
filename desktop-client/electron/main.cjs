@@ -1,403 +1,34 @@
-const { app, BrowserWindow, dialog, Tray, Menu, nativeImage } = require("electron");
+const { app, BrowserWindow, dialog, Tray, Menu, nativeImage, ipcMain } = require("electron");
 const path = require("path");
-const { spawn } = require("child_process");
-const net = require("net");
-const http = require("http");
+
+// Import utility modules
+const { checkLinuxDependencies } = require("./utils/dependencies.cjs");
+const { startBackend, stopBackend, getBackendPort } = require("./utils/backend.cjs");
+const { getIconPath, getTrayIconPath } = require("./utils/paths.cjs");
+
+// Single instance lock - ensure only one instance runs
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Another instance is already running, quit this one immediately
+  app.quit();
+}
 
 let mainWindow = null;
-let backendProcess = null;
-let backendPort = null;
 let tray = null;
 let isQuitting = false;
-let firewallOpened = false;
 
-// Get the path to the app icon
-function getIconPath() {
-  if (app.isPackaged) {
-    // In production, icon is in extraResources folder
-    return path.join(process.resourcesPath, "extraResources", "ctrldeck-256.png");
-  } else {
-    // In development, use public folder
-    return path.join(__dirname, "..", "public", "ctrldeck.png");
+// Handle second instance attempt - show, focus, and maximize existing window
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.maximize();
   }
-}
-
-// Get the path to the tray icon (smaller size for system tray)
-function getTrayIconPath() {
-  if (app.isPackaged) {
-    // In production, use smaller tray icon
-    return path.join(process.resourcesPath, "extraResources", "ctrldeck-tray.png");
-  } else {
-    // In development, use public folder
-    return path.join(__dirname, "..", "public", "ctrldeck.png");
-  }
-}
-
-// Check if a port is available
-function isPortAvailable(port) {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.once("error", () => resolve(false));
-    server.once("listening", () => {
-      server.close();
-      resolve(true);
-    });
-    server.listen(port, "127.0.0.1");
-  });
-}
-
-// Find an available port starting from the given port
-async function findAvailablePort(startPort = 8080) {
-  let port = startPort;
-  while (port < startPort + 100) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-    port++;
-  }
-  throw new Error("No available port found");
-}
-
-// Wait for backend to be ready
-function waitForBackend(port, maxRetries = 30, retryDelay = 500) {
-  return new Promise((resolve, reject) => {
-    let retries = 0;
-
-    const checkHealth = () => {
-      const req = http.request(
-        {
-          hostname: "127.0.0.1",
-          port: port,
-          path: "/health",
-          method: "GET",
-          timeout: 1000,
-        },
-        (res) => {
-          if (res.statusCode === 200) {
-            resolve();
-          } else {
-            retry();
-          }
-        }
-      );
-
-      req.on("error", () => retry());
-      req.on("timeout", () => {
-        req.destroy();
-        retry();
-      });
-
-      req.end();
-    };
-
-    const retry = () => {
-      retries++;
-      if (retries >= maxRetries) {
-        reject(new Error("Backend failed to start"));
-      } else {
-        setTimeout(checkHealth, retryDelay);
-      }
-    };
-
-    checkHealth();
-  });
-}
-
-// Check if UFW rule already exists for a port (without needing root) - Linux
-function isUfwRuleExists(port) {
-  return new Promise((resolve) => {
-    const fs = require("fs");
-    const rulesPath = "/etc/ufw/user.rules";
-    
-    // Check if UFW rules file exists and is readable
-    fs.readFile(rulesPath, "utf8", (err, data) => {
-      if (err) {
-        // Can't read file - assume rule doesn't exist
-        console.log("Could not read UFW rules file, will attempt to add rule");
-        resolve(false);
-        return;
-      }
-      
-      // Look for a rule that allows the port
-      // UFW rules format includes lines like: -A ufw-user-input -p tcp --dport 8080 -j ACCEPT
-      const portRegex = new RegExp(`--dport ${port}\\s+-j\\s+ACCEPT`);
-      resolve(portRegex.test(data));
-    });
-  });
-}
-
-// Check if Windows Firewall rule already exists for a port (without needing admin)
-function isWindowsFirewallRuleExists(port) {
-  return new Promise((resolve) => {
-    const ruleName = `CtrlDeck-${port}`;
-    
-    // Use netsh to check if rule exists - this doesn't require admin
-    const proc = spawn("netsh", [
-      "advfirewall", "firewall", "show", "rule",
-      `name=${ruleName}`
-    ], { shell: true });
-    
-    let output = "";
-    
-    proc.stdout?.on("data", (data) => {
-      output += data.toString();
-    });
-    
-    proc.stderr?.on("data", (data) => {
-      // Ignore stderr
-    });
-    
-    proc.on("error", () => {
-      resolve(false);
-    });
-    
-    proc.on("close", (code) => {
-      // If the rule exists, netsh returns 0 and outputs rule details
-      // If no rule found, it outputs "No rules match the specified criteria"
-      if (code === 0 && !output.includes("No rules match")) {
-        resolve(true);
-      } else {
-        resolve(false);
-      }
-    });
-  });
-}
-
-// Open firewall port to expose backend to the network
-async function openFirewallPort(port) {
-  return new Promise(async (resolve) => {
-    console.log(`Checking firewall for port ${port}...`);
-    
-    let proc;
-    
-    if (process.platform === "linux") {
-      // Check if UFW rule already exists (no root needed)
-      const ruleExists = await isUfwRuleExists(port);
-      if (ruleExists) {
-        console.log(`Firewall rule for port ${port} already exists, skipping pkexec`);
-        firewallOpened = true;
-        resolve(true);
-        return;
-      }
-      
-      console.log(`Opening firewall port ${port}...`);
-      // Use pkexec for GUI authentication on Linux with UFW
-      proc = spawn("pkexec", ["ufw", "allow", `${port}/tcp`, "comment", "CtrlDeck"]);
-    } else if (process.platform === "win32") {
-      // Check if Windows Firewall rule already exists (no admin needed)
-      const ruleExists = await isWindowsFirewallRuleExists(port);
-      if (ruleExists) {
-        console.log(`Firewall rule for port ${port} already exists, skipping admin prompt`);
-        firewallOpened = true;
-        resolve(true);
-        return;
-      }
-      
-      console.log(`Opening firewall port ${port}...`);
-      // Windows - use netsh (requires admin elevation)
-      proc = spawn("netsh", [
-        "advfirewall", "firewall", "add", "rule",
-        `name=CtrlDeck-${port}`,
-        "dir=in",
-        "action=allow",
-        "protocol=tcp",
-        `localport=${port}`
-      ], { shell: true });
-    } else if (process.platform === "darwin") {
-      // macOS - firewall is typically handled differently
-      console.log("macOS firewall management not implemented - may prompt for access automatically");
-      resolve(true);
-      return;
-    } else {
-      console.log(`Firewall management not supported on ${process.platform}`);
-      resolve(false);
-      return;
-    }
-
-    proc.stdout?.on("data", (data) => {
-      console.log(`Firewall stdout: ${data}`);
-    });
-
-    proc.stderr?.on("data", (data) => {
-      console.error(`Firewall stderr: ${data}`);
-    });
-
-    proc.on("error", (err) => {
-      console.error("Failed to open firewall port:", err);
-      resolve(false);
-    });
-
-    proc.on("close", (code) => {
-      if (code === 0) {
-        console.log(`Firewall port ${port} opened successfully`);
-        firewallOpened = true;
-        resolve(true);
-      } else {
-        console.log(`Firewall command exited with code ${code} - port may not be open`);
-        resolve(false);
-      }
-    });
-  });
-}
-
-// Close firewall port when app closes
-async function closeFirewallPort(port) {
-  return new Promise((resolve) => {
-    if (!firewallOpened || !port) {
-      resolve(true);
-      return;
-    }
-    
-    console.log(`Closing firewall port ${port}...`);
-    
-    let proc;
-    
-    if (process.platform === "linux") {
-      // Use pkexec for GUI authentication on Linux with UFW
-      proc = spawn("pkexec", ["ufw", "delete", "allow", `${port}/tcp`]);
-    } else if (process.platform === "win32") {
-      // Windows - use netsh
-      proc = spawn("netsh", [
-        "advfirewall", "firewall", "delete", "rule",
-        `name=CtrlDeck-${port}`
-      ], { shell: true });
-    } else {
-      resolve(true);
-      return;
-    }
-
-    proc.stdout?.on("data", (data) => {
-      console.log(`Firewall stdout: ${data}`);
-    });
-
-    proc.stderr?.on("data", (data) => {
-      console.error(`Firewall stderr: ${data}`);
-    });
-
-    proc.on("error", (err) => {
-      console.error("Failed to close firewall port:", err);
-      resolve(false);
-    });
-
-    proc.on("close", (code) => {
-      if (code === 0) {
-        console.log(`Firewall port ${port} closed successfully`);
-      } else {
-        console.log(`Firewall delete command exited with code ${code}`);
-      }
-      firewallOpened = false;
-      resolve(true);
-    });
-  });
-}
-
-// Get the path to the backend binary
-function getBackendPath() {
-  const isPackaged = app.isPackaged;
-  const platform = process.platform;
-  const binaryName =
-    platform === "win32" ? "ctrldeck-server.exe" : "ctrldeck-server";
-
-  if (isPackaged) {
-    // In production, extraResources are in the resources folder
-    return path.join(process.resourcesPath, "extraResources", binaryName);
-  } else {
-    // In development, use relative path from electron folder
-    return path.join(__dirname, "..", "extraResources", binaryName);
-  }
-}
-
-// Start the backend server
-async function startBackend() {
-  try {
-    backendPort = await findAvailablePort(8080);
-    console.log(`Starting backend on port ${backendPort}`);
-
-    const backendPath = getBackendPath();
-    console.log(`Backend path: ${backendPath}`);
-
-    // Check if backend binary exists
-    const fs = require("fs");
-    if (!fs.existsSync(backendPath)) {
-      throw new Error(`Backend binary not found at: ${backendPath}`);
-    }
-
-    backendProcess = spawn(backendPath, ["--port", backendPort.toString()], {
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: false,
-    });
-
-    backendProcess.stdout.on("data", (data) => {
-      console.log(`Backend stdout: ${data}`);
-    });
-
-    backendProcess.stderr.on("data", (data) => {
-      console.error(`Backend stderr: ${data}`);
-    });
-
-    backendProcess.on("error", (err) => {
-      console.error("Failed to start backend:", err);
-      dialog.showErrorBox(
-        "Backend Error",
-        `Failed to start backend: ${err.message}`
-      );
-    });
-
-    backendProcess.on("exit", (code, signal) => {
-      console.log(`Backend exited with code ${code}, signal ${signal}`);
-      backendProcess = null;
-    });
-
-    // Wait for backend to be ready
-    await waitForBackend(backendPort);
-    console.log("Backend is ready");
-
-    // Open firewall port to expose backend to the network
-    try {
-      await openFirewallPort(backendPort);
-    } catch (err) {
-      console.log("Firewall configuration skipped or failed:", err.message);
-    }
-
-    return backendPort;
-  } catch (error) {
-    console.error("Error starting backend:", error);
-    throw error;
-  }
-}
-
-// Stop the backend server
-async function stopBackend() {
-  // Close firewall port first
-  if (firewallOpened && backendPort) {
-    try {
-      await closeFirewallPort(backendPort);
-    } catch (err) {
-      console.log("Failed to close firewall port:", err.message);
-    }
-  }
-
-  if (backendProcess) {
-    console.log("Stopping backend...");
-
-    if (process.platform === "win32") {
-      // On Windows, use taskkill to ensure process tree is killed
-      spawn("taskkill", ["/pid", backendProcess.pid.toString(), "/f", "/t"]);
-    } else {
-      // On Unix, send SIGTERM
-      backendProcess.kill("SIGTERM");
-
-      // Force kill after timeout
-      setTimeout(() => {
-        if (backendProcess) {
-          backendProcess.kill("SIGKILL");
-        }
-      }, 5000);
-    }
-
-    backendProcess = null;
-  }
-}
+});
 
 // Create system tray (production only)
 function createTray() {
@@ -448,6 +79,8 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    frame: false, // Frameless window for custom title bar
+    titleBarStyle: "hidden", // Hidden title bar
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -456,9 +89,6 @@ function createWindow() {
     icon: getIconPath(),
     title: "CtrlDeck",
   });
-
-  // Remove menu bar on Windows/Linux
-  mainWindow.setMenuBarVisibility(false);
 
   // Maximize window on startup
   mainWindow.maximize();
@@ -489,8 +119,14 @@ function createWindow() {
 // App lifecycle
 app.whenReady().then(async () => {
   try {
+    // Check for required Linux dependencies
+    const depsOk = await checkLinuxDependencies();
+    if (!depsOk) {
+      return; // User chose to quit or critical error
+    }
+
     // Start backend first
-    await startBackend();
+    const backendPort = await startBackend();
 
     // Create system tray in production only
     if (app.isPackaged) {
@@ -548,4 +184,31 @@ app.on("will-quit", () => {
 process.on("uncaughtException", (error) => {
   console.error("Uncaught exception:", error);
   stopBackend();
+});
+
+// IPC handlers for window controls
+ipcMain.on("window-minimize", () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
+
+ipcMain.on("window-maximize", () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.on("window-close", () => {
+  if (mainWindow) {
+    mainWindow.close();
+  }
+});
+
+ipcMain.handle("window-is-maximized", () => {
+  return mainWindow ? mainWindow.isMaximized() : false;
 });

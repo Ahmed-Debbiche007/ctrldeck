@@ -12,7 +12,9 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 
-	"ctrldeck-server/internal/core/actions"
+	"ctrldeck-server/internal/core/actions/brightness"
+	"ctrldeck-server/internal/core/actions/mic"
+	"ctrldeck-server/internal/core/actions/volume"
 	"ctrldeck-server/internal/models"
 )
 
@@ -23,9 +25,9 @@ type SystemMetricsService struct {
 	subscribers          map[chan models.SystemMetrics]bool
 	subscribersMu        sync.RWMutex
 	stopChan             chan struct{}
-	micController        *actions.MicController
-	volController        *actions.VolumeController
-	brightnessController *actions.BrightnessController
+	micController        *mic.MicController
+	volController        *volume.VolumeController
+	brightnessController *brightness.BrightnessController
 	prevNetStats         []net.IOCountersStat
 	prevNetTime          time.Time
 }
@@ -35,9 +37,9 @@ func NewSystemMetricsService() *SystemMetricsService {
 	return &SystemMetricsService{
 		subscribers:          make(map[chan models.SystemMetrics]bool),
 		stopChan:             make(chan struct{}),
-		micController:        actions.NewMicController(),
-		volController:        actions.NewVolumeController(),
-		brightnessController: actions.NewBrightnessController(),
+		micController:        mic.NewMicController(),
+		volController:        volume.NewVolumeController(),
+		brightnessController: brightness.NewBrightnessController(),
 	}
 }
 

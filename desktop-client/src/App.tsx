@@ -3,10 +3,17 @@ import { Zap, BarChart3, QrCode, Menu, X } from 'lucide-react';
 import { ActionsPage } from './pages/ActionsPage';
 import { MetricsPage } from './pages/MetricsPage';
 import { ConnectionPage } from './pages/ConnectionPage';
+import { TitleBar } from './components/TitleBar';
 import './App.css';
 import logo from './assets/ctrldeck.svg'
 
 type Page = 'actions' | 'metrics' | 'connection';
+
+const pageTitles: Record<Page, string> = {
+  actions: 'Actions',
+  metrics: 'Metrics',
+  connection: 'Connect',
+};
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('actions');
@@ -19,7 +26,11 @@ function App() {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
+      {/* Custom Title Bar */}
+      <TitleBar title={pageTitles[currentPage]} />
+
+      <div className="flex flex-1 overflow-hidden">
       {/* Sidebar */}
       <aside
         className={`${
@@ -112,6 +123,7 @@ function App() {
           {currentPage === 'connection' && <ConnectionPage />}
         </div>
       </main>
+      </div>
     </div>
   );
 }

@@ -19,7 +19,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App version
   getVersion: () => {
     return process.env.npm_package_version || '0.0.0';
-  }
+  },
+
+  // Window controls
+  windowMinimize: () => ipcRenderer.send('window-minimize'),
+  windowMaximize: () => ipcRenderer.send('window-maximize'),
+  windowClose: () => ipcRenderer.send('window-close'),
+  windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
 });
 
 // Inject backend URL as soon as available

@@ -1,4 +1,23 @@
 @import "tailwindcss";
+
+/* Custom Title Bar - Drag regions */
+.title-bar {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.title-bar .drag-region {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.title-bar .no-drag,
+.title-bar button {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* Leaflet map dark mode */
 .leaflet-layer,
 .leaflet-control-zoom-in,
 .leaflet-control-zoom-out,

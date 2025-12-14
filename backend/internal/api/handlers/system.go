@@ -11,6 +11,9 @@ import (
 
 	"ctrldeck-server/internal/config"
 	"ctrldeck-server/internal/core/actions"
+	"ctrldeck-server/internal/core/actions/brightness"
+	"ctrldeck-server/internal/core/actions/mic"
+	"ctrldeck-server/internal/core/actions/volume"
 	"ctrldeck-server/internal/models"
 	"ctrldeck-server/internal/services"
 )
@@ -18,9 +21,9 @@ import (
 // SystemHandler handles system-related HTTP requests including action execution
 type SystemHandler struct {
 	store                *config.Store
-	micController        *actions.MicController
-	volController        *actions.VolumeController
-	brightnessController *actions.BrightnessController
+	micController        *mic.MicController
+	volController        *volume.VolumeController
+	brightnessController *brightness.BrightnessController
 	appLauncher          *actions.AppLauncher
 	scriptExecutor       *actions.ScriptExecutor
 	metricsService       *services.SystemMetricsService
@@ -36,9 +39,9 @@ func NewSystemHandler(
 ) *SystemHandler {
 	return &SystemHandler{
 		store:                store,
-		micController:        actions.NewMicController(),
-		volController:        actions.NewVolumeController(),
-		brightnessController: actions.NewBrightnessController(),
+		micController:        mic.NewMicController(),
+		volController:        volume.NewVolumeController(),
+		brightnessController: brightness.NewBrightnessController(),
 		appLauncher:          actions.NewAppLauncher(),
 		scriptExecutor:       actions.NewScriptExecutor(nil),
 		metricsService:       metricsService,

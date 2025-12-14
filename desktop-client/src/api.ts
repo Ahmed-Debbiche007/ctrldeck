@@ -10,6 +10,11 @@ declare global {
       getBackendPort: () => number;
       platform: string;
       getVersion: () => string;
+      // Window controls
+      windowMinimize: () => void;
+      windowMaximize: () => void;
+      windowClose: () => void;
+      windowIsMaximized: () => Promise<boolean>;
     };
   }
 }
