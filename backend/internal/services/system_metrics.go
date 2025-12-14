@@ -1,14 +1,10 @@
 package services
 
 import (
-	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 
@@ -116,8 +112,8 @@ func (s *SystemMetricsService) collectMetrics() {
 	// Battery (if available)
 	metrics.BatteryLevel, metrics.IsCharging = s.getBatteryInfoPlatform()
 
-	// CPU Temperature
-	metrics.CPUTemp = s.getCPUTemperature()
+	// CPU Temperature (platform-specific)
+	metrics.CPUTemp = s.getCPUTemperaturePlatform()
 
 	// Mic muted state
 	muted, err := s.micController.IsMuted()
@@ -166,39 +162,6 @@ func (s *SystemMetricsService) broadcast() {
 	}
 }
 
-// getCPUTemperature returns the CPU temperature
-func (s *SystemMetricsService) getCPUTemperature() float64 {
-	temps, err := host.SensorsTemperatures()
-	if err != nil {
-		return 0
-	}
-
-	// Look for CPU temperature sensors
-	cpuTempKeys := []string{
-		"coretemp_core_0",
-		"coretemp_package_id_0",
-		"k10temp_tdie",
-		"cpu_thermal",
-		"CPU",
-		"Core 0",
-	}
-
-	for _, temp := range temps {
-		for _, key := range cpuTempKeys {
-			if temp.SensorKey == key {
-				return temp.Temperature
-			}
-		}
-	}
-
-	// Return first temperature if no specific CPU temp found
-	if len(temps) > 0 {
-		return temps[0].Temperature
-	}
-
-	return 0
-}
-
 // getNetworkSpeed calculates network upload/download speeds
 func (s *SystemMetricsService) getNetworkSpeed() (float64, float64) {
 	netStats, err := net.IOCounters(false)
@@ -229,38 +192,4 @@ func (s *SystemMetricsService) getNetworkSpeed() (float64, float64) {
 	s.prevNetTime = currentTime
 
 	return uploadSpeed, downloadSpeed
-}
-
-// Helper functions
-func readFileAsInt(path string) (int, error) {
-	content, err := readFileAsString(path)
-	if err != nil {
-		return 0, err
-	}
-
-	var value int
-	_, err = parseIntFromString(content, &value)
-	return value, err
-}
-
-func readFileAsString(path string) (string, error) {
-	data, err := readFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
-}
-
-func readFile(path string) ([]byte, error) {
-	return os.ReadFile(path)
-}
-
-func parseIntFromString(s string, value *int) (int, error) {
-	s = strings.TrimSpace(s)
-	n, err := strconv.Atoi(s)
-	if err != nil {
-		return 0, err
-	}
-	*value = n
-	return n, nil
 }

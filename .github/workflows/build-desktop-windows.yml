@@ -33,13 +33,13 @@ jobs:
           GOARCH: amd64
           CGO_ENABLED: 0
         run: |
-          go build -ldflags="-s -w" -o streamdeck-server.exe ./cmd/server
+          go build -ldflags="-s -w" -o ctrldeck-server.exe ./cmd/server
 
       - name: Prepare extraResources
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path desktop-client/extraResources
-          Copy-Item backend/streamdeck-server.exe desktop-client/extraResources/
+          Copy-Item backend/ctrldeck-server.exe desktop-client/extraResources/
 
       - name: Install Node dependencies
         working-directory: desktop-client
@@ -53,10 +53,10 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts
-          # Find the portable exe (typically named "StreamDeck <version>.exe" or similar)
+          # Find the portable exe (typically named "CtrlDeck <version>.exe" or similar)
           $exeFile = Get-ChildItem -Path "desktop-client/release" -Filter "*.exe" -Recurse | Where-Object { $_.Name -notlike "*-unpacked*" } | Select-Object -First 1
           if ($exeFile) {
-            Copy-Item $exeFile.FullName "artifacts/StreamDeck-windows.exe"
+            Copy-Item $exeFile.FullName "artifacts/CtrlDeck-windows.exe"
             Write-Host "Found and copied: $($exeFile.Name)"
           } else {
             Write-Host "Warning: No exe file found in release directory"
@@ -67,5 +67,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: artifacts/StreamDeck-windows.exe
+          path: artifacts/CtrlDeck-windows.exe
           retention-days: 30

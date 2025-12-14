@@ -2,13 +2,16 @@ package brightness
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"unsafe"
 
+	"github.com/go-ole/go-ole"
+	"github.com/go-ole/go-ole/oleutil"
 	"golang.org/x/sys/windows"
 )
 
-// Win32 API structures
+// Win32 API structures for DDC/CI
 type rect struct {
 	Left   int32
 	Top    int32
@@ -110,7 +113,7 @@ func applyToMonitor(op monitorOp) error {
 
 	currentOp = op
 	currentGetOp = nil
-	lastError = nil
+	lastError = errors.New("no monitor found")
 
 	callback := windows.NewCallback(monitorEnumProc)
 
@@ -132,7 +135,7 @@ func getFromMonitor(op monitorGetOp) (int, error) {
 
 	currentOp = nil
 	currentGetOp = op
-	lastError = nil
+	lastError = errors.New("no monitor found")
 	lastBrightness = 0
 
 	callback := windows.NewCallback(monitorEnumProc)
@@ -148,12 +151,137 @@ func getFromMonitor(op monitorGetOp) (int, error) {
 	return lastBrightness, lastError
 }
 
-// Platform-specific implementations
-func (bc *BrightnessController) initPlatform() {
-	// No initialization needed for Windows
+// WMI Brightness Control (for laptops) - Using COM/OLE
+func getBrightnessWMI() (int, error) {
+	// Initialize COM
+	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+	if err != nil {
+		oleErr, ok := err.(*ole.OleError)
+		if !ok || (oleErr.Code() != 0x00000001 && oleErr.Code() != 0x80010106) {
+			return 0, fmt.Errorf("COM initialization failed: %v", err)
+		}
+	}
+	defer ole.CoUninitialize()
+
+	// Get WMI service
+	unknown, err := oleutil.CreateObject("WbemScripting.SWbemLocator")
+	if err != nil {
+		return 0, errors.New("WMI not available")
+	}
+	defer unknown.Release()
+
+	wmi, err := unknown.QueryInterface(ole.IID_IDispatch)
+	if err != nil {
+		return 0, errors.New("WMI query interface failed")
+	}
+	defer wmi.Release()
+
+	// Connect to WMI namespace
+	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", nil, "root/WMI")
+	if err != nil {
+		return 0, errors.New("WMI connect failed")
+	}
+	service := serviceRaw.ToIDispatch()
+	defer service.Release()
+
+	// Query brightness
+	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", "SELECT CurrentBrightness FROM WmiMonitorBrightness")
+	if err != nil {
+		return 0, errors.New("WMI brightness query failed")
+	}
+	result := resultRaw.ToIDispatch()
+	defer result.Release()
+
+	// Get count
+	countVar, err := oleutil.GetProperty(result, "Count")
+	if err != nil || countVar.Val == 0 {
+		return 0, errors.New("no brightness data")
+	}
+
+	// Get first item
+	itemRaw, err := oleutil.CallMethod(result, "ItemIndex", 0)
+	if err != nil {
+		return 0, errors.New("failed to get brightness item")
+	}
+	item := itemRaw.ToIDispatch()
+	defer item.Release()
+
+	// Get brightness value
+	brightnessVar, err := oleutil.GetProperty(item, "CurrentBrightness")
+	if err != nil {
+		return 0, errors.New("failed to read brightness value")
+	}
+
+	brightness := int(brightnessVar.Val)
+	return brightness, nil
 }
 
-func (bc *BrightnessController) getBrightnessPlatform() (int, error) {
+func setBrightnessWMI(percent int) error {
+	// Initialize COM
+	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+	if err != nil {
+		oleErr, ok := err.(*ole.OleError)
+		if !ok || (oleErr.Code() != 0x00000001 && oleErr.Code() != 0x80010106) {
+			return fmt.Errorf("COM initialization failed: %v", err)
+		}
+	}
+	defer ole.CoUninitialize()
+
+	// Get WMI service
+	unknown, err := oleutil.CreateObject("WbemScripting.SWbemLocator")
+	if err != nil {
+		return errors.New("WMI not available")
+	}
+	defer unknown.Release()
+
+	wmi, err := unknown.QueryInterface(ole.IID_IDispatch)
+	if err != nil {
+		return errors.New("WMI query interface failed")
+	}
+	defer wmi.Release()
+
+	// Connect to WMI namespace
+	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", nil, "root/WMI")
+	if err != nil {
+		return errors.New("WMI connect failed")
+	}
+	service := serviceRaw.ToIDispatch()
+	defer service.Release()
+
+	// Query brightness methods
+	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", "SELECT * FROM WmiMonitorBrightnessMethods")
+	if err != nil {
+		return errors.New("WMI brightness methods query failed")
+	}
+	result := resultRaw.ToIDispatch()
+	defer result.Release()
+
+	// Get count
+	countVar, err := oleutil.GetProperty(result, "Count")
+	if err != nil || countVar.Val == 0 {
+		return errors.New("no brightness control available")
+	}
+
+	// Get first item
+	itemRaw, err := oleutil.CallMethod(result, "ItemIndex", 0)
+	if err != nil {
+		return errors.New("failed to get brightness control")
+	}
+	item := itemRaw.ToIDispatch()
+	defer item.Release()
+
+	// Call WmiSetBrightness(Timeout, Brightness)
+	// Timeout: 1 second, Brightness: 0-100
+	_, err = oleutil.CallMethod(item, "WmiSetBrightness", 1, percent)
+	if err != nil {
+		return fmt.Errorf("failed to set brightness: %v", err)
+	}
+
+	return nil
+}
+
+// DDC/CI Brightness Control (for external monitors)
+func getBrightnessDDC() (int, error) {
 	return getFromMonitor(func(handle windows.Handle) (int, error) {
 		var min, current, max uint32
 
@@ -165,7 +293,7 @@ func (bc *BrightnessController) getBrightnessPlatform() (int, error) {
 		)
 
 		if ret == 0 {
-			return 0, errors.New("failed to get monitor brightness: " + err.Error())
+			return 0, fmt.Errorf("DDC/CI not supported: %v", err)
 		}
 
 		// Return current brightness as percentage
@@ -178,14 +306,7 @@ func (bc *BrightnessController) getBrightnessPlatform() (int, error) {
 	})
 }
 
-func (bc *BrightnessController) setBrightnessPlatform(percent int) error {
-	if percent < 0 {
-		percent = 0
-	}
-	if percent > 100 {
-		percent = 100
-	}
-
+func setBrightnessDDC(percent int) error {
 	return applyToMonitor(func(handle windows.Handle) error {
 		var min, current, max uint32
 
@@ -198,7 +319,7 @@ func (bc *BrightnessController) setBrightnessPlatform(percent int) error {
 		)
 
 		if ret == 0 {
-			return errors.New("failed to get monitor brightness range: " + err.Error())
+			return fmt.Errorf("DDC/CI not supported: %v", err)
 		}
 
 		// Convert percentage to brightness value
@@ -210,9 +331,55 @@ func (bc *BrightnessController) setBrightnessPlatform(percent int) error {
 		)
 
 		if ret == 0 {
-			return errors.New("failed to set monitor brightness: " + err.Error())
+			return fmt.Errorf("failed to set brightness: %v", err)
 		}
 
 		return nil
 	})
+}
+
+// Platform-specific implementations
+func (bc *BrightnessController) initPlatform() {
+	// No initialization needed for Windows
+}
+
+func (bc *BrightnessController) getBrightnessPlatform() (int, error) {
+	// Try WMI first (for laptops) - fast native COM calls
+	brightness, err := getBrightnessWMI()
+	if err == nil {
+		return brightness, nil
+	}
+
+	// Fallback to DDC/CI (for external monitors)
+	brightness, err = getBrightnessDDC()
+	if err == nil {
+		return brightness, nil
+	}
+
+	// If both fail, return a helpful error
+	return 0, errors.New("brightness control not supported on this system")
+}
+
+func (bc *BrightnessController) setBrightnessPlatform(percent int) error {
+	if percent < 0 {
+		percent = 0
+	}
+	if percent > 100 {
+		percent = 100
+	}
+
+	// Try WMI first (for laptops) - fast native COM calls
+	err := setBrightnessWMI(percent)
+	if err == nil {
+		return nil
+	}
+
+	// Fallback to DDC/CI (for external monitors)
+	err = setBrightnessDDC(percent)
+	if err == nil {
+		return nil
+	}
+
+	// If both fail, return a helpful error
+	return errors.New("brightness control not supported on this system")
 }

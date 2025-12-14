@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -177,7 +178,13 @@ func (h *SystemHandler) toggleVolumeMute() models.ActionResponse {
 		return models.ActionResponse{Success: false, Error: err.Error()}
 	}
 
-	return models.ActionResponse{Success: true, Message: "Volume mute toggled"}
+	muted, _ := h.volController.IsMuted()
+	msg := "Volume unmuted"
+	if muted {
+		msg = "Volume muted"
+	}
+
+	return models.ActionResponse{Success: true, Message: msg}
 }
 
 // launchApp launches an application
@@ -297,6 +304,7 @@ func (h *SystemHandler) SetBrightnessLevel(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		fmt.Println("Error decoding brightness request:", err)
 		h.sendError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -311,6 +319,7 @@ func (h *SystemHandler) SetBrightnessLevel(w http.ResponseWriter, r *http.Reques
 
 	err := h.brightnessController.SetBrightness(req.Level)
 	if err != nil {
+		fmt.Println("Error setting brightness:", err)
 		h.sendError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

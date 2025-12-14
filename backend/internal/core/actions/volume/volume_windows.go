@@ -122,17 +122,13 @@ func (v *VolumeController) toggleMuteWindows() error {
 		return err
 	}
 
-	return endpoint.SetMute(!muted, nil)
-}
-
-func (v *VolumeController) setMuteWindows(mute bool) error {
-	endpoint, cleanup, err := getAudioEndpoint()
-	if err != nil {
+	// Toggle the mute state
+	newMuted := !muted
+	if err := endpoint.SetMute(newMuted, nil); err != nil {
 		return err
 	}
-	defer cleanup()
 
-	return endpoint.SetMute(mute, nil)
+	return nil
 }
 
 func (v *VolumeController) isMutedWindows() (bool, error) {
