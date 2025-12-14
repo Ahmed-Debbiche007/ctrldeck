@@ -117,8 +117,8 @@ We welcome contributions! Here's how you can help:
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/streamdeck.git
-   cd streamdeck
+   git clone https://github.com/Ahmed-Debbiche007/ctrldeck.git
+   cd ctrldeck
    ```
 3. Create a feature branch:
    ```bash
@@ -160,7 +160,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ### Reporting Issues
 
-- Use the [Issues](https://github.com/Ahmed-Debbiche007/streamdeck/issues) page
+- Use the [Issues](https://github.com/Ahmed-Debbiche007/ctrldeck/issues) page
 - Include steps to reproduce, expected behavior, and actual behavior
 - Add screenshots if applicable
 
