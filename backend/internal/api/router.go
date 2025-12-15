@@ -97,6 +97,9 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		// Brightness control (direct brightness setting)
 		r.Post("/system/brightness", systemHandler.SetBrightnessLevel)
 
+		// Media control (play/pause, next, prev)
+		r.Post("/system/media", systemHandler.MediaControl)
+
 		// Server info (IP addresses)
 		r.Get("/system/info", systemHandler.GetServerInfo)
 

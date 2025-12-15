@@ -273,6 +273,16 @@ export async function setBrightness(level: number): Promise<{ success: boolean; 
   return res.json();
 }
 
+// Media Control
+export async function mediaControl(action: 'play_pause' | 'next' | 'prev'): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/api/system/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action }),
+  });
+  return res.json();
+}
+
 // Server Info (IP addresses)
 export interface ServerInfo {
   ip_addresses: string[];

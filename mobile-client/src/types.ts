@@ -18,7 +18,10 @@ export type ActionType =
   | 'brightness_knob'
   | 'launch_app'
   | 'run_script'
-  | 'open_url';
+  | 'open_url'
+  | 'media_play_pause'
+  | 'media_next'
+  | 'media_prev';
 
 // Widget Types
 export interface Widget {
@@ -46,6 +49,14 @@ export interface InstalledApp {
   category: string;
 }
 
+// Media State
+export interface MediaState {
+  title: string;
+  artist: string;
+  status: 'Playing' | 'Paused' | 'Stopped' | '';
+  thumbnail: string; // Base64 encoded image
+}
+
 // System Metrics
 export interface SystemMetrics {
   cpu_usage: number;
@@ -61,6 +72,7 @@ export interface SystemMetrics {
   brightness_level: number;
   network_upload: number;
   network_download: number;
+  media: MediaState;
   timestamp: number;
 }
 

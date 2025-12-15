@@ -137,6 +137,17 @@ export async function setBrightness(level: number): Promise<{ success: boolean; 
   return res.json();
 }
 
+// Media Control
+export async function mediaControl(action: 'play_pause' | 'next' | 'prev'): Promise<{ success: boolean; message: string }> {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/system/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action }),
+  });
+  return res.json();
+}
+
 // WebSocket Connection
 export async function connectWebSocket(
   onMetrics: (metrics: SystemMetrics) => void,

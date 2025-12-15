@@ -22,6 +22,7 @@ import { VolumeKnobButton } from "@/components/VolumeKnobButton";
 import { VolumeSliderButton } from "@/components/VolumeSliderButton";
 import { BrightnessKnobButton } from "@/components/BrightnessKnobButton";
 import { BrightnessSliderButton } from "@/components/BrightnessSliderButton";
+import { MediaPlayPauseButton } from "@/components/MediaPlayPauseButton";
 
 // Icon name normalization helper
 function normalizeIconName(icon: string): string {
@@ -337,6 +338,60 @@ export function ActionsScreen({ onSettingsClick }: ActionsScreenProps) {
               name={button.name}
             />
           )}
+        </View>
+      );
+    }
+
+    // Render Media Play/Pause button with rich now playing info
+    if (button.action_type === "media_play_pause") {
+      const isExecuting = executingId === button.id;
+      const mediaState = metrics?.media ?? {
+        title: "",
+        artist: "",
+        status: "" as const,
+        thumbnail: "",
+      };
+
+      return (
+        <View key={button.id} style={styles.buttonWrapper}>
+          <MediaPlayPauseButton
+            media={mediaState}
+            isExecuting={isExecuting}
+            onPress={() => handleExecuteAction(button.id)}
+          />
+        </View>
+      );
+    }
+
+    // Render Media Next/Prev buttons
+    if (
+      button.action_type === "media_next" ||
+      button.action_type === "media_prev"
+    ) {
+      const isExecuting = executingId === button.id;
+      const mediaColor = "#8b5cf6";
+      const iconName =
+        button.action_type === "media_next" ? "skip-forward" : "skip-back";
+
+      return (
+        <View key={button.id} style={styles.buttonWrapper}>
+          <TouchableOpacity
+            onPress={() => handleExecuteAction(button.id)}
+            style={[
+              styles.actionButton,
+              {
+                backgroundColor: `${mediaColor}15`,
+                borderColor: mediaColor,
+                transform: [{ scale: isExecuting ? 0.9 : 1 }],
+              },
+            ]}
+            activeOpacity={0.7}
+          >
+            <Feather name={iconName as any} size={20} color={mediaColor} />
+            <Text style={styles.buttonName} numberOfLines={1}>
+              {button.name}
+            </Text>
+          </TouchableOpacity>
         </View>
       );
     }

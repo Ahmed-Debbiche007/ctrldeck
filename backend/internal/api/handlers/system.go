@@ -13,6 +13,7 @@ import (
 	"ctrldeck-server/internal/config"
 	"ctrldeck-server/internal/core/actions"
 	"ctrldeck-server/internal/core/actions/brightness"
+	"ctrldeck-server/internal/core/actions/media"
 	"ctrldeck-server/internal/core/actions/mic"
 	"ctrldeck-server/internal/core/actions/volume"
 	"ctrldeck-server/internal/models"
@@ -119,6 +120,12 @@ func (h *SystemHandler) executeButtonAction(button *models.Button) models.Action
 	case "open_url":
 		url := button.ActionData["url"]
 		return h.openURL(url)
+	case "media_play_pause":
+		return h.mediaPlayPause()
+	case "media_next":
+		return h.mediaNext()
+	case "media_prev":
+		return h.mediaPrev()
 	default:
 		return models.ActionResponse{
 			Success: false,
@@ -255,6 +262,79 @@ func (h *SystemHandler) openURL(url string) models.ActionResponse {
 	}
 
 	return models.ActionResponse{Success: true, Message: "URL opened"}
+}
+
+// mediaPlayPause toggles media playback
+func (h *SystemHandler) mediaPlayPause() models.ActionResponse {
+	if media.Current == nil {
+		return models.ActionResponse{Success: false, Error: "Media controller not available"}
+	}
+
+	err := media.Current.PlayPause()
+	if err != nil {
+		return models.ActionResponse{Success: false, Error: err.Error()}
+	}
+
+	return models.ActionResponse{Success: true, Message: "Media play/pause toggled"}
+}
+
+// mediaNext skips to the next track
+func (h *SystemHandler) mediaNext() models.ActionResponse {
+	if media.Current == nil {
+		return models.ActionResponse{Success: false, Error: "Media controller not available"}
+	}
+
+	err := media.Current.NextTrack()
+	if err != nil {
+		return models.ActionResponse{Success: false, Error: err.Error()}
+	}
+
+	return models.ActionResponse{Success: true, Message: "Skipped to next track"}
+}
+
+// mediaPrev skips to the previous track
+func (h *SystemHandler) mediaPrev() models.ActionResponse {
+	if media.Current == nil {
+		return models.ActionResponse{Success: false, Error: "Media controller not available"}
+	}
+
+	err := media.Current.PrevTrack()
+	if err != nil {
+		return models.ActionResponse{Success: false, Error: err.Error()}
+	}
+
+	return models.ActionResponse{Success: true, Message: "Skipped to previous track"}
+}
+
+// MediaControl handles direct media control requests
+func (h *SystemHandler) MediaControl(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Action string `json:"action"` // "play_pause", "next", "prev"
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.sendError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var response models.ActionResponse
+	switch req.Action {
+	case "play_pause":
+		response = h.mediaPlayPause()
+	case "next":
+		response = h.mediaNext()
+	case "prev":
+		response = h.mediaPrev()
+	default:
+		h.sendError(w, "Invalid action: "+req.Action, http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if !response.Success {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 // GetSystemMetrics returns current system metrics

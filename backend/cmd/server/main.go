@@ -14,6 +14,8 @@ import (
 
 	"ctrldeck-server/internal/api"
 	"ctrldeck-server/internal/config"
+	"ctrldeck-server/internal/core/actions/media"
+	"ctrldeck-server/internal/models"
 	"ctrldeck-server/internal/services"
 )
 
@@ -52,6 +54,26 @@ func main() {
 	// Start metrics collection (every second)
 	metricsService.Start(1 * time.Second)
 	defer metricsService.Stop()
+
+	// Start media listener and wire up state updates
+	if media.Current != nil {
+		media.OnUpdate = func(state media.MediaState) {
+			// Convert media.MediaState to models.MediaState
+			metricsService.UpdateMediaState(models.MediaState{
+				Title:     state.Title,
+				Artist:    state.Artist,
+				Status:    state.Status,
+				Thumbnail: state.Thumbnail,
+			})
+		}
+		if err := media.Current.StartListener(); err != nil {
+			log.Printf("Warning: Failed to start media listener: %v", err)
+		} else {
+			log.Printf("Media listener started")
+		}
+	} else {
+		log.Printf("Warning: No media controller available for this platform")
+	}
 
 	// Pre-populate app cache in background
 	go func() {

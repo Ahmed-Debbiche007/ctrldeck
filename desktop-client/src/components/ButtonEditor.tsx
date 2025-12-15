@@ -18,6 +18,9 @@ const actionTypes: { value: ActionType; label: string; description: string }[] =
   { value: 'volume_mute', label: 'Toggle Volume', description: 'Toggle volume on/off' },
   { value: 'volume_knob', label: 'Volume Knob', description: 'Interactive volume control' },
   { value: 'brightness_knob', label: 'Brightness Knob', description: 'Interactive brightness control' },
+  { value: 'media_play_pause', label: 'Media Play/Pause', description: 'Play/pause with now playing info' },
+  { value: 'media_next', label: 'Media Next', description: 'Skip to next track' },
+  { value: 'media_prev', label: 'Media Previous', description: 'Skip to previous track' },
   { value: 'launch_app', label: 'Launch App', description: 'Open an application' },
   { value: 'run_script', label: 'Run Script', description: 'Execute a custom script' },
   { value: 'open_url', label: 'Open URL', description: 'Open a website' },
@@ -432,6 +435,24 @@ export function ButtonEditor({ button, onSave, onUpdate, onClose }: ButtonEditor
                     <div className="w-4 h-4 rounded-full bg-red-500"></div>
                     <span>Volume Muted</span>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Info for media_play_pause dynamic display */}
+          {actionType === 'media_play_pause' && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Appearance</label>
+              <div className="p-3 bg-gray-800/50 rounded-lg text-sm text-gray-400">
+                This button displays now playing information:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Album artwork as background</li>
+                  <li>Song title and artist name</li>
+                  <li>Pause overlay when paused</li>
+                </ul>
+                <div className="mt-2 text-xs text-gray-500">
+                  Click to toggle play/pause
                 </div>
               </div>
             </div>

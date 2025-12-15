@@ -5,12 +5,14 @@ go 1.22
 require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-ole/go-ole v1.2.6
+	github.com/godbus/dbus/v5 v5.2.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/micmonay/keybd_event v1.1.2
 	github.com/moutend/go-wca v0.3.0
 	github.com/rs/cors v1.11.1
 	github.com/shirou/gopsutil/v3 v3.24.5
-	golang.org/x/sys v0.20.0
+	golang.org/x/sys v0.27.0
 )
 
 require (

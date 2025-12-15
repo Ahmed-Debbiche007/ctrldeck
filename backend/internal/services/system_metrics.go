@@ -18,6 +18,7 @@ import (
 type SystemMetricsService struct {
 	mu                   sync.RWMutex
 	currentMetrics       models.SystemMetrics
+	currentMediaState    models.MediaState
 	subscribers          map[chan models.SystemMetrics]bool
 	subscribersMu        sync.RWMutex
 	stopChan             chan struct{}
@@ -142,9 +143,23 @@ func (s *SystemMetricsService) collectMetrics() {
 	// Network speed
 	metrics.NetworkUpload, metrics.NetworkDown = s.getNetworkSpeed()
 
+	// Media state (updated via callback, just copy current state)
+	metrics.Media = s.currentMediaState
+
 	s.mu.Lock()
 	s.currentMetrics = metrics
 	s.mu.Unlock()
+}
+
+// UpdateMediaState updates the current media state (called from media controller callback)
+func (s *SystemMetricsService) UpdateMediaState(state models.MediaState) {
+	s.mu.Lock()
+	s.currentMediaState = state
+	s.currentMetrics.Media = state
+	s.mu.Unlock()
+
+	// Broadcast immediately when media state changes
+	s.broadcast()
 }
 
 // broadcast sends metrics to all subscribers
